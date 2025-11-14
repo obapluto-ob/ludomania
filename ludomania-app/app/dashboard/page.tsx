@@ -130,42 +130,27 @@ export default function DashboardPage() {
         </div>
 
         {/* Game Section */}
-        <div className="grid sm:grid-cols-2 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-2xl p-6 sm:p-8 border border-blue-500/30 hover:scale-105 transition-transform">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center transform rotate-45">
-                <div className="transform -rotate-45 text-4xl">🎮</div>
-              </div>
-              <h2 className="text-2xl font-bold text-white">Create Game</h2>
+        <div className="bg-gradient-to-br from-emerald-600 to-green-700 rounded-2xl shadow-2xl p-8 border border-emerald-500/30 hover:scale-105 transition-transform mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center">
+              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+              </svg>
             </div>
-            <p className="text-blue-100 mb-6 text-lg">
-              Start a new Ludo game and challenge your friends with real money!
-            </p>
-            <Link
-              href="/game/create"
-              className="block w-full bg-white hover:bg-gray-100 text-blue-700 text-center px-6 py-4 rounded-xl font-bold text-lg transition shadow-lg"
-            >
-              Create New Game →
-            </Link>
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-2xl shadow-2xl p-6 sm:p-8 border border-purple-500/30 hover:scale-105 transition-transform">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center transform rotate-45">
-                <div className="transform -rotate-45 text-4xl">🔗</div>
-              </div>
-              <h2 className="text-2xl font-bold text-white">Join Game</h2>
+            <div>
+              <h2 className="text-3xl font-bold text-white">Play Ludo</h2>
+              <p className="text-emerald-100">Free or Money Mode Available</p>
             </div>
-            <p className="text-purple-100 mb-6 text-lg">
-              Enter a room code to join an existing game and compete!
-            </p>
-            <Link
-              href="/game/join"
-              className="block w-full bg-white hover:bg-gray-100 text-purple-700 text-center px-6 py-4 rounded-xl font-bold text-lg transition shadow-lg"
-            >
-              Join Game →
-            </Link>
           </div>
+          <p className="text-white/90 mb-6 text-lg">
+            Choose between free play with friends or compete for real money prizes!
+          </p>
+          <Link
+            href="/dashboard/games"
+            className="block w-full bg-white hover:bg-gray-100 text-emerald-700 text-center px-6 py-4 rounded-xl font-bold text-lg transition shadow-lg"
+          >
+            Start Playing →
+          </Link>
         </div>
 
         {/* Quick Stats */}
