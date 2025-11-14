@@ -110,14 +110,14 @@ export default function SignupPage() {
 
         {error && (
           <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-4">
-            <div className="font-semibold mb-1">❌ Error</div>
+            <div className="font-semibold mb-1">Error</div>
             <div className="text-sm">{error}</div>
           </div>
         )}
 
         {debugInfo && (
           <div className="bg-yellow-900/50 border border-yellow-500 text-yellow-200 px-4 py-3 rounded-lg mb-4 text-xs">
-            <div className="font-semibold mb-2">🐛 Debug Info:</div>
+            <div className="font-semibold mb-2">Debug Info:</div>
             <div className="space-y-1">
               <div><strong>Step:</strong> {debugInfo.step}</div>
               <div><strong>Error:</strong></div>
@@ -172,7 +172,7 @@ export default function SignupPage() {
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30"
           >
-            {loading ? '⏳ Creating account...' : '🚀 Sign Up'}
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
