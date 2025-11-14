@@ -14,6 +14,7 @@ interface Profile {
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,11 +23,15 @@ export default function DashboardPage() {
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       router.push('/auth/login');
       return;
     }
+
+    // Check if user is admin
+    const adminEmail = 'michealbyers750@gmail.com';
+    setIsAdmin(user.email === adminEmail);
 
     // Get profile
     const { data: profileData } = await supabase
@@ -38,7 +43,7 @@ export default function DashboardPage() {
     if (profileData) {
       setProfile(profileData);
     }
-    
+
     setLoading(false);
   };
 
@@ -61,9 +66,16 @@ export default function DashboardPage() {
       <header className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            {/* Ludo Logo */}
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 via-yellow-500 to-green-500 rounded-lg flex items-center justify-center shadow-lg transform rotate-45">
-              <div className="transform -rotate-45 text-white font-bold text-xl">L</div>
+            {/* Dice Logo */}
+            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-lg">
+              <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="20" height="20" rx="3" fill="#DC2626" stroke="#991B1B" strokeWidth="1.5"/>
+                <circle cx="7" cy="7" r="1.5" fill="white"/>
+                <circle cx="12" cy="12" r="1.5" fill="white"/>
+                <circle cx="17" cy="7" r="1.5" fill="white"/>
+                <circle cx="7" cy="17" r="1.5" fill="white"/>
+                <circle cx="17" cy="17" r="1.5" fill="white"/>
+              </svg>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
               LUDOMANIA
@@ -74,12 +86,14 @@ export default function DashboardPage() {
               <p className="text-gray-400 text-sm">Welcome back,</p>
               <p className="text-white font-bold text-lg">{profile?.username}</p>
             </div>
-            <Link
-              href="/admin"
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-lg"
-            >
-              Admin
-            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-lg"
+              >
+                Admin
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-lg"

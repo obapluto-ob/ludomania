@@ -41,16 +41,13 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Check if user is admin (you can add admin check here)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', user.id)
-      .single();
+    // Check if user email is admin email
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'michealbyers750@gmail.com';
 
-    // For now, any logged-in user can access admin (you should add proper admin role check)
-    if (!profile) {
+    if (user.email !== adminEmail) {
+      alert('Access Denied: Admin only');
       router.push('/dashboard');
+      return;
     }
   };
 

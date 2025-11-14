@@ -9,7 +9,9 @@ export default function FreeGamePage() {
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState('');
   const [roomCode, setRoomCode] = useState('');
+  const [joinRoomCode, setJoinRoomCode] = useState('');
   const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -41,10 +43,118 @@ export default function FreeGamePage() {
 
   const createRoom = async () => {
     setCreating(true);
-    const code = generateRoomCode();
-    setRoomCode(code);
-    // TODO: Create room in database
-    setCreating(false);
+    try {
+      const code = generateRoomCode();
+
+      // Create room in database
+      const { data: room, error: roomError } = await supabase
+        .from('game_rooms')
+        .insert({
+          room_code: code,
+          game_mode: 'free',
+          wager: 0,
+          status: 'waiting',
+          created_by: userId,
+        })
+        .select()
+        .single();
+
+      if (roomError) throw roomError;
+
+      // Add creator as first player
+      const { error: playerError } = await supabase
+        .from('game_players')
+        .insert({
+          room_id: room.id,
+          user_id: userId,
+          color: 'red',
+          position: 1,
+          is_ready: false,
+        });
+
+      if (playerError) throw playerError;
+
+      setRoomCode(code);
+
+      // Redirect to game room after 2 seconds
+      setTimeout(() => {
+        router.push(`/dashboard/games/room/${room.id}`);
+      }, 2000);
+    } catch (error: any) {
+      console.error('Error creating room:', error);
+      alert('Failed to create room. Please try again.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const joinRoom = async () => {
+    if (!joinRoomCode || joinRoomCode.length !== 6) {
+      alert('Please enter a valid 6-digit room code');
+      return;
+    }
+
+    setJoining(true);
+    try {
+      // Find room by code
+      const { data: room, error: roomError } = await supabase
+        .from('game_rooms')
+        .select('*')
+        .eq('room_code', joinRoomCode)
+        .eq('status', 'waiting')
+        .single();
+
+      if (roomError || !room) {
+        alert('Room not found or already started');
+        return;
+      }
+
+      // Check how many players already in room
+      const { data: players, error: playersError } = await supabase
+        .from('game_players')
+        .select('*')
+        .eq('room_id', room.id);
+
+      if (playersError) throw playersError;
+
+      if (players.length >= 4) {
+        alert('Room is full (max 4 players)');
+        return;
+      }
+
+      // Check if user already in room
+      const alreadyJoined = players.some(p => p.user_id === userId);
+      if (alreadyJoined) {
+        router.push(`/dashboard/games/room/${room.id}`);
+        return;
+      }
+
+      // Assign color based on available colors
+      const usedColors = players.map(p => p.color);
+      const availableColors = ['red', 'yellow', 'green', 'blue'].filter(c => !usedColors.includes(c));
+      const assignedColor = availableColors[0];
+
+      // Add player to room
+      const { error: joinError } = await supabase
+        .from('game_players')
+        .insert({
+          room_id: room.id,
+          user_id: userId,
+          color: assignedColor,
+          position: players.length + 1,
+          is_ready: false,
+        });
+
+      if (joinError) throw joinError;
+
+      // Redirect to game room
+      router.push(`/dashboard/games/room/${room.id}`);
+    } catch (error: any) {
+      console.error('Error joining room:', error);
+      alert('Failed to join room. Please try again.');
+    } finally {
+      setJoining(false);
+    }
   };
 
   return (
@@ -137,19 +247,20 @@ export default function FreeGamePage() {
               <label className="block text-gray-300 font-medium mb-2">Room Code</label>
               <input
                 type="text"
+                value={joinRoomCode}
                 placeholder="Enter 6-digit code"
                 className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white text-center text-2xl tracking-widest uppercase"
                 maxLength={6}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
               />
             </div>
 
             <button
-              onClick={() => alert('Game board coming soon!')}
-              disabled={roomCode.length !== 6}
+              onClick={joinRoom}
+              disabled={joinRoomCode.length !== 6 || joining}
               className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-xl font-bold hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Join Game
+              {joining ? 'Joining...' : 'Join Game'}
             </button>
           </div>
         </div>
