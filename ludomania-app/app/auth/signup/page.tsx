@@ -102,51 +102,44 @@ export default function SignupPage() {
 
       if (authData.user) {
         // Wait a moment for auth to fully process
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Create profile using the authenticated session
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: authData.user.id,
-          username,
-          wallet_balance: 0,
-        });
+        // Check if profile already exists (created by trigger)
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .eq('id', authData.user.id)
+          .maybeSingle();
 
-        if (profileError) {
-          // Log detailed error info
-          console.error('Profile creation error:', {
-            error: profileError,
-            userId: authData.user.id,
+        if (!existingProfile) {
+          // Profile doesn't exist, create it manually
+          const { error: profileError } = await supabase.from('profiles').insert({
+            id: authData.user.id,
             username,
-            email,
-            errorCode: profileError.code,
-            errorMessage: profileError.message,
-            errorDetails: profileError.details,
-            errorHint: profileError.hint,
+            wallet_balance: 0,
           });
 
-          setError('Account created but profile setup failed. Please contact support.');
-
-          // Send debug info to backend
-          await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              step: 'Profile Creation',
-              error: {
-                message: profileError.message,
-                code: profileError.code,
-                details: profileError.details,
-                hint: profileError.hint,
-              },
+          if (profileError) {
+            // Log detailed error info
+            console.error('Profile creation error:', {
+              error: profileError,
               userId: authData.user.id,
-              email,
               username,
-              timestamp: new Date().toISOString(),
-            }),
-          }).catch(() => {});
+              email,
+              errorCode: profileError.code,
+              errorMessage: profileError.message,
+            });
 
-          setLoading(false);
-          return;
+            setError('Account created but profile setup failed. Please contact support.');
+            setLoading(false);
+            return;
+          }
+        } else if (existingProfile.username !== username) {
+          // Profile exists but username is wrong, update it
+          await supabase
+            .from('profiles')
+            .update({ username })
+            .eq('id', authData.user.id);
         }
 
         // Send admin notification with all user data
