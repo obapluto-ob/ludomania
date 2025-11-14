@@ -36,13 +36,14 @@ export default function SignupPage() {
 
     try {
       // Check if username already exists
-      const { data: existingUsername } = await supabase
+      const { data: existingUsername, error: usernameCheckError } = await supabase
         .from('profiles')
         .select('username')
         .eq('username', username)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no match
 
-      if (existingUsername) {
+      // Only block if username actually exists (ignore query errors)
+      if (existingUsername && !usernameCheckError) {
         setError('Username already taken. Please choose another one.');
         setLoading(false);
         return;
@@ -60,25 +61,40 @@ export default function SignupPage() {
       });
 
       if (authError) {
+        // Log detailed error to console for debugging
+        console.error('🔴 Supabase Auth Error:', {
+          message: authError.message,
+          status: authError.status,
+          name: authError.name,
+          email,
+          username,
+        });
+
         // User-friendly error messages
-        if (authError.message.includes('already registered')) {
+        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
           setError('This email is already registered. Please login instead.');
+        } else if (authError.message.includes('Invalid email')) {
+          setError('Invalid email format. Please check and try again.');
+        } else if (authError.message.includes('Password')) {
+          setError('Password must be at least 6 characters long.');
         } else {
-          setError('Registration failed. Please try again.');
+          setError(`Registration failed: ${authError.message}`);
         }
 
-        // Send debug info to backend
-        await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            step: 'Auth Signup',
-            error: authError,
-            email,
-            username,
-            timestamp: new Date().toISOString(),
-          }),
-        }).catch(() => {}); // Ignore if backend is down
+        // Send debug info to backend (only if backend is running)
+        if (process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL && !process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL.includes('localhost')) {
+          await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              step: 'Auth Signup',
+              error: authError,
+              email,
+              username,
+              timestamp: new Date().toISOString(),
+            }),
+          }).catch(() => {}); // Ignore if backend is down
+        }
 
         setLoading(false);
         return;
