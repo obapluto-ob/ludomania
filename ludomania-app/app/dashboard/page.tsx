@@ -74,6 +74,12 @@ export default function DashboardPage() {
               <p className="text-gray-400 text-sm">Welcome back,</p>
               <p className="text-white font-bold text-lg">{profile?.username}</p>
             </div>
+            <Link
+              href="/admin"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-lg"
+            >
+              Admin
+            </Link>
             <button
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition shadow-lg"
