@@ -48,10 +48,15 @@ export default function SignupPage() {
         return;
       }
 
-      // Sign up user
+      // Sign up user with username in metadata
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            username: username,
+          },
+        },
       });
 
       if (authError) {
@@ -80,7 +85,10 @@ export default function SignupPage() {
       }
 
       if (authData.user) {
-        // Create profile
+        // Wait a moment for auth to fully process
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Create profile using the authenticated session
         const { error: profileError } = await supabase.from('profiles').insert({
           id: authData.user.id,
           username,
@@ -88,6 +96,18 @@ export default function SignupPage() {
         });
 
         if (profileError) {
+          // Log detailed error info
+          console.error('Profile creation error:', {
+            error: profileError,
+            userId: authData.user.id,
+            username,
+            email,
+            errorCode: profileError.code,
+            errorMessage: profileError.message,
+            errorDetails: profileError.details,
+            errorHint: profileError.hint,
+          });
+
           setError('Account created but profile setup failed. Please contact support.');
 
           // Send debug info to backend
@@ -96,7 +116,12 @@ export default function SignupPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               step: 'Profile Creation',
-              error: profileError,
+              error: {
+                message: profileError.message,
+                code: profileError.code,
+                details: profileError.details,
+                hint: profileError.hint,
+              },
               userId: authData.user.id,
               email,
               username,
