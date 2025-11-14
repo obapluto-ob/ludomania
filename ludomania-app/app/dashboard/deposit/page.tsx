@@ -10,6 +10,8 @@ export default function DepositPage() {
   const [mpesaNumber, setMpesaNumber] = useState('');
   const [mpesaName, setMpesaName] = useState('');
   const [proofUrl, setProofUrl] = useState('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +40,54 @@ export default function DepositPage() {
 
     if (profile) {
       setUsername(profile.username);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file (JPG, PNG, etc.)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    setProofFile(file);
+    setUploadingProof(true);
+    setError('');
+
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}_${Date.now()}.${fileExt}`;
+      const filePath = `deposit-proofs/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('transaction-proofs')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('transaction-proofs')
+        .getPublicUrl(filePath);
+
+      setProofUrl(urlData.publicUrl);
+    } catch (err: any) {
+      setError('Failed to upload screenshot. Please try again.');
+      console.error('Upload error:', err);
+    } finally {
+      setUploadingProof(false);
     }
   };
 
@@ -84,6 +134,7 @@ export default function DepositPage() {
       setMpesaNumber('');
       setMpesaName('');
       setProofUrl('');
+      setProofFile(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -228,18 +279,68 @@ export default function DepositPage() {
 
             <div>
               <label className="block text-gray-300 font-medium mb-2">
-                M-Pesa Confirmation Code / Screenshot Link
+                M-Pesa Confirmation Proof
               </label>
+
+              {/* File Upload Option */}
+              <div className="mb-4">
+                <label className="block w-full cursor-pointer">
+                  <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-green-500 transition bg-slate-700/50">
+                    {proofFile ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                          <p className="text-green-400 font-semibold">{proofFile.name}</p>
+                          <p className="text-gray-400 text-sm">Screenshot uploaded successfully</p>
+                        </div>
+                      </div>
+                    ) : uploadingProof ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <svg className="animate-spin h-8 w-8 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p className="text-green-400">Uploading screenshot...</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-white font-semibold mb-1">Upload M-Pesa Screenshot</p>
+                        <p className="text-gray-400 text-sm">Click to select image from your device</p>
+                        <p className="text-gray-500 text-xs mt-2">JPG, PNG (Max 5MB)</p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* OR Divider */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 border-t border-slate-600"></div>
+                <span className="text-gray-400 text-sm">OR</span>
+                <div className="flex-1 border-t border-slate-600"></div>
+              </div>
+
+              {/* Text Input Option */}
               <input
                 type="text"
                 value={proofUrl}
                 onChange={(e) => setProofUrl(e.target.value)}
-                placeholder="e.g. QA12BC3DEF or https://imgur.com/abc123.jpg"
+                placeholder="Enter M-Pesa confirmation code (e.g. QA12BC3DEF)"
                 className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white"
-                required
               />
               <p className="text-sm text-gray-400 mt-1">
-                Enter the M-Pesa confirmation code from your SMS, or upload screenshot to <a href="https://imgur.com/upload" target="_blank" className="text-green-400 hover:underline">Imgur</a> and paste link
+                Upload screenshot above OR enter the M-Pesa confirmation code from your SMS
               </p>
             </div>
 

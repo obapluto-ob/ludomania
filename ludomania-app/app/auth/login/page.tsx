@@ -49,6 +49,20 @@ export default function LoginPage() {
       }
 
       if (data.user) {
+        // Check if user's email is verified
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email_verified, username')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile && !profile.email_verified) {
+          // User not verified - redirect to verification page
+          router.push(`/auth/verify?email=${encodeURIComponent(email)}&username=${encodeURIComponent(profile.username || '')}`);
+          return;
+        }
+
+        // User is verified - proceed to dashboard
         router.push('/dashboard');
       }
     } catch (err: any) {
