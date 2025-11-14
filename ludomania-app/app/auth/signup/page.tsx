@@ -49,13 +49,15 @@ export default function SignupPage() {
         return;
       }
 
-      // Sign up user with username in metadata
+      // Sign up user with username in metadata and display name
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             username: username,
+            full_name: username,  // Set display name to username
+            display_name: username,  // Also set display_name
           },
         },
       });
