@@ -98,6 +98,84 @@ export async function sendGameCompletedNotification(
   }
 }
 
+// Generate 6-digit verification code
+export function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send welcome email with verification code to user
+export async function sendWelcomeEmail(
+  username: string,
+  email: string,
+  verificationCode: string
+) {
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: email,
+    subject: 'Welcome to Ludomania - Verify Your Account',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background-color: #1e40af; color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+          <h1 style="margin: 0; font-size: 32px;">Welcome to Ludomania!</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Kenya's Premier Ludo Gaming Platform</p>
+        </div>
+
+        <div style="background-color: white; padding: 40px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1e40af; margin-top: 0;">Hello ${username}!</h2>
+
+          <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+            Thank you for joining Ludomania! We're excited to have you as part of our gaming community.
+          </p>
+
+          <div style="background-color: #dbeafe; padding: 30px; border-radius: 10px; text-align: center; margin: 30px 0;">
+            <p style="margin: 0 0 15px 0; color: #1e40af; font-weight: bold; font-size: 14px;">YOUR VERIFICATION CODE</p>
+            <div style="background-color: white; padding: 20px; border-radius: 8px; display: inline-block;">
+              <span style="font-size: 36px; font-weight: bold; color: #1e40af; letter-spacing: 8px; font-family: monospace;">${verificationCode}</span>
+            </div>
+            <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 12px;">This code expires in 10 minutes</p>
+          </div>
+
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1e40af; margin-top: 0; font-size: 18px;">What's Next?</h3>
+            <ul style="color: #374151; line-height: 1.8; padding-left: 20px;">
+              <li>Enter the verification code to activate your account</li>
+              <li>Deposit funds using M-Pesa</li>
+              <li>Challenge friends to Ludo games</li>
+              <li>Win real money!</li>
+            </ul>
+          </div>
+
+          <div style="background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #92400e; font-size: 14px;">
+              <strong>⚠️ Security Tip:</strong> Never share your verification code with anyone. Ludomania staff will never ask for your code.
+            </p>
+          </div>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ludomania-iota.vercel.app'}"
+               style="background-color: #1e40af; color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Go to Dashboard
+            </a>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px;">
+          <p>Ludomania - Play Responsibly | ${new Date().getFullYear()}</p>
+          <p>Nairobi, Kenya</p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Welcome email sent to user:', email);
+  } catch (error) {
+    console.error('❌ Error sending welcome email:', error);
+    throw error;
+  }
+}
+
 export async function sendNewUserNotification(
   username: string,
   email: string,

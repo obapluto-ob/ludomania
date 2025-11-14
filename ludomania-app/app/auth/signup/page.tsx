@@ -14,14 +14,108 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordMatchError, setPasswordMatchError] = useState('');
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const router = useRouter();
+
+  // Real-time email validation
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      setEmailError('');
+      return false;
+    }
+    if (!emailRegex.test(email)) {
+      setEmailError('Invalid email format');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
+
+  // Real-time username check
+  const checkUsername = async (username: string) => {
+    if (!username || username.length < 3) {
+      setUsernameError('');
+      return;
+    }
+
+    setCheckingUsername(true);
+    try {
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (existingUsername) {
+        setUsernameError('Username already taken');
+      } else {
+        setUsernameError('');
+      }
+    } catch (err) {
+      console.error('Username check error:', err);
+    } finally {
+      setCheckingUsername(false);
+    }
+  };
+
+  // Real-time password match check
+  const checkPasswordMatch = (confirm: string) => {
+    if (!confirm) {
+      setPasswordMatchError('');
+      return;
+    }
+    if (password !== confirm) {
+      setPasswordMatchError('Passwords do not match');
+    } else {
+      setPasswordMatchError('');
+    }
+  };
+
+  // Handle username change with debounce
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    if (value.length >= 3) {
+      const timeoutId = setTimeout(() => checkUsername(value), 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setUsernameError('');
+    }
+  };
+
+  // Handle email change
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    validateEmail(value);
+  };
+
+  // Handle confirm password change
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    checkPasswordMatch(value);
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Validation
+    // Final validation
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    if (usernameError) {
+      setError('Please fix the username error');
+      setLoading(false);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
@@ -35,15 +129,14 @@ export default function SignupPage() {
     }
 
     try {
-      // Check if username already exists
-      const { data: existingUsername, error: usernameCheckError } = await supabase
+      // Double-check username availability
+      const { data: existingUsername } = await supabase
         .from('profiles')
         .select('username')
         .eq('username', username)
-        .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no match
+        .maybeSingle();
 
-      // Only block if username actually exists (ignore query errors)
-      if (existingUsername && !usernameCheckError) {
+      if (existingUsername) {
         setError('Username already taken. Please choose another one.');
         setLoading(false);
         return;
@@ -132,7 +225,7 @@ export default function SignupPage() {
               errorMessage: profileError.message,
             });
 
-            setError('Account created but profile setup failed. Please contact support.');
+            setError('Database error saving new user. Please try again or contact support.');
             setLoading(false);
             return;
           }
@@ -142,6 +235,21 @@ export default function SignupPage() {
             .from('profiles')
             .update({ username })
             .eq('id', authData.user.id);
+        }
+
+        // Send verification email to user
+        const verificationResponse = await fetch('/api/send-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            email,
+            userId: authData.user.id,
+          }),
+        });
+
+        if (!verificationResponse.ok) {
+          console.error('Failed to send verification email');
         }
 
         // Send admin notification with all user data
@@ -158,23 +266,11 @@ export default function SignupPage() {
         });
 
         if (!adminNotification.ok) {
-          // Log to backend but don't show error to user
-          await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              step: 'Admin Email Notification',
-              error: await adminNotification.text(),
-              userId: authData.user.id,
-              email,
-              username,
-              timestamp: new Date().toISOString(),
-            }),
-          }).catch(() => {});
+          console.error('Failed to send admin notification');
         }
 
-        // Success - redirect to dashboard
-        router.push('/dashboard');
+        // Success - redirect to verification page
+        router.push(`/auth/verify?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}`);
       }
     } catch (err: any) {
       setError('System error occurred. Please try again later.');
@@ -228,14 +324,28 @@ export default function SignupPage() {
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <label className="block text-gray-300 font-medium mb-2">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-              placeholder="Choose a username"
-              required
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => handleUsernameChange(e.target.value)}
+                className={`w-full px-4 py-3 bg-slate-700 border ${usernameError ? 'border-red-500' : 'border-slate-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`}
+                placeholder="Choose a username"
+                required
+                minLength={3}
+              />
+              {checkingUsername && (
+                <div className="absolute right-3 top-3 text-gray-400">
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            {usernameError && (
+              <p className="text-red-400 text-sm mt-1">{usernameError}</p>
+            )}
           </div>
 
           <div>
@@ -243,11 +353,14 @@ export default function SignupPage() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+              onChange={(e) => handleEmailChange(e.target.value)}
+              className={`w-full px-4 py-3 bg-slate-700 border ${emailError ? 'border-red-500' : 'border-slate-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white`}
               placeholder="your@email.com"
               required
             />
+            {emailError && (
+              <p className="text-red-400 text-sm mt-1">{emailError}</p>
+            )}
           </div>
 
           <div>
@@ -288,8 +401,8 @@ export default function SignupPage() {
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white pr-12"
+                onChange={(e) => handleConfirmPasswordChange(e.target.value)}
+                className={`w-full px-4 py-3 bg-slate-700 border ${passwordMatchError ? 'border-red-500' : 'border-slate-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white pr-12`}
                 placeholder="Re-enter your password"
                 required
                 minLength={6}
@@ -311,11 +424,14 @@ export default function SignupPage() {
                 )}
               </button>
             </div>
+            {passwordMatchError && (
+              <p className="text-red-400 text-sm mt-1">{passwordMatchError}</p>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || checkingUsername || !!usernameError || !!emailError || !!passwordMatchError}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30"
           >
             {loading ? 'Creating account...' : 'Sign Up'}
