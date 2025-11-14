@@ -15,6 +15,7 @@ from utils.email_service import (
 )
 from utils.otp_service import generate_otp, store_otp, verify_otp, clear_otp
 from utils.device_tracker import check_device, get_user_devices
+from routes.debug import router as debug_router
 
 settings = get_settings()
 supabase = create_client(settings.supabase_url, settings.supabase_service_key)
@@ -34,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include debug router
+app.include_router(debug_router, tags=["Debug"])
 
 
 # Pydantic Models

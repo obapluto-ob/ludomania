@@ -8,20 +8,45 @@ import Link from 'next/link';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setDebugInfo(null);
     setLoading(true);
 
+    // Validation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
     try {
-      console.log('🔵 Starting signup process...', { email, username });
+      // Check if username already exists
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .single();
+
+      if (existingUsername) {
+        setError('Username already taken. Please choose another one.');
+        setLoading(false);
+        return;
+      }
 
       // Sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -29,16 +54,32 @@ export default function SignupPage() {
         password,
       });
 
-      console.log('🔵 Supabase auth response:', { authData, authError });
-
       if (authError) {
-        setDebugInfo({ step: 'Auth Signup', error: authError });
-        throw authError;
+        // User-friendly error messages
+        if (authError.message.includes('already registered')) {
+          setError('This email is already registered. Please login instead.');
+        } else {
+          setError('Registration failed. Please try again.');
+        }
+
+        // Send debug info to backend
+        await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            step: 'Auth Signup',
+            error: authError,
+            email,
+            username,
+            timestamp: new Date().toISOString(),
+          }),
+        }).catch(() => {}); // Ignore if backend is down
+
+        setLoading(false);
+        return;
       }
 
       if (authData.user) {
-        console.log('🔵 Creating profile for user:', authData.user.id);
-
         // Create profile
         const { error: profileError } = await supabase.from('profiles').insert({
           id: authData.user.id,
@@ -46,41 +87,74 @@ export default function SignupPage() {
           wallet_balance: 0,
         });
 
-        console.log('🔵 Profile creation response:', { profileError });
-
         if (profileError) {
-          setDebugInfo({ step: 'Profile Creation', error: profileError });
-          throw profileError;
+          setError('Account created but profile setup failed. Please contact support.');
+
+          // Send debug info to backend
+          await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              step: 'Profile Creation',
+              error: profileError,
+              userId: authData.user.id,
+              email,
+              username,
+              timestamp: new Date().toISOString(),
+            }),
+          }).catch(() => {});
+
+          setLoading(false);
+          return;
         }
 
-        console.log('🔵 Sending notification email...');
-
-        // Send notification email (API route will handle this)
-        const emailResponse = await fetch('/api/user-registered', {
+        // Send admin notification with all user data
+        const adminNotification = await fetch('/api/user-registered', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             username,
             email,
             userId: authData.user.id,
+            registeredAt: new Date().toISOString(),
+            ipAddress: 'N/A', // Will be captured by backend
           }),
         });
 
-        const emailResult = await emailResponse.json();
-        console.log('🔵 Email notification response:', emailResult);
-
-        if (!emailResponse.ok) {
-          setDebugInfo({ step: 'Email Notification', error: emailResult });
-          console.warn('⚠️ Email notification failed but continuing...');
+        if (!adminNotification.ok) {
+          // Log to backend but don't show error to user
+          await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              step: 'Admin Email Notification',
+              error: await adminNotification.text(),
+              userId: authData.user.id,
+              email,
+              username,
+              timestamp: new Date().toISOString(),
+            }),
+          }).catch(() => {});
         }
 
-        console.log('✅ Signup successful! Redirecting to dashboard...');
+        // Success - redirect to dashboard
         router.push('/dashboard');
       }
     } catch (err: any) {
-      console.error('❌ Signup error:', err);
-      setError(err.message || 'Failed to sign up');
-      setDebugInfo((prev: any) => prev || { step: 'Unknown', error: err });
+      setError('System error occurred. Please try again later.');
+
+      // Send debug info to backend
+      await fetch(process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL + '/debug-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: 'Unknown Error',
+          error: err.message || err,
+          email,
+          username,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(() => {});
     } finally {
       setLoading(false);
     }
@@ -110,21 +184,8 @@ export default function SignupPage() {
 
         {error && (
           <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-4">
-            <div className="font-semibold mb-1">Error</div>
+            <div className="font-semibold mb-1">Registration Failed</div>
             <div className="text-sm">{error}</div>
-          </div>
-        )}
-
-        {debugInfo && (
-          <div className="bg-yellow-900/50 border border-yellow-500 text-yellow-200 px-4 py-3 rounded-lg mb-4 text-xs">
-            <div className="font-semibold mb-2">Debug Info:</div>
-            <div className="space-y-1">
-              <div><strong>Step:</strong> {debugInfo.step}</div>
-              <div><strong>Error:</strong></div>
-              <pre className="bg-slate-900 p-2 rounded mt-1 overflow-auto max-h-32">
-                {JSON.stringify(debugInfo.error, null, 2)}
-              </pre>
-            </div>
           </div>
         )}
 
@@ -155,16 +216,65 @@ export default function SignupPage() {
 
           <div>
             <label className="block text-gray-300 font-medium mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-              placeholder="Minimum 6 characters"
-              required
-              minLength={6}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white pr-12"
+                placeholder="Minimum 6 characters"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+              >
+                {showPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
             <p className="text-xs text-gray-400 mt-1">Must be at least 6 characters</p>
+          </div>
+
+          <div>
+            <label className="block text-gray-300 font-medium mb-2">Confirm Password</label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white pr-12"
+                placeholder="Re-enter your password"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+              >
+                {showConfirmPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button

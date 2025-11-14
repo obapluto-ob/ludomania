@@ -98,24 +98,89 @@ export async function sendGameCompletedNotification(
   }
 }
 
-export async function sendNewUserNotification(username: string, email: string, userId: string) {
+export async function sendNewUserNotification(
+  username: string,
+  email: string,
+  userId: string,
+  metadata?: {
+    registeredAt?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }
+) {
+  const registeredAt = metadata?.registeredAt || new Date().toISOString();
+  const ipAddress = metadata?.ipAddress || 'Unknown';
+  const userAgent = metadata?.userAgent || 'Unknown';
+
   const mailOptions = {
     from: process.env.SMTP_USER,
     to: adminEmail,
-    subject: '👤 New User Registration - Ludomania',
+    subject: '🔔 NEW USER REGISTRATION - Ludomania Security Alert',
     html: `
-      <h2>New User Registered</h2>
-      <p><strong>Username:</strong> ${username}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>User ID:</strong> ${userId}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background-color: #1e40af; color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+          <h1 style="margin: 0;">🔔 New User Registration</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Ludomania Security System</p>
+        </div>
+
+        <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #1e40af; margin-top: 0;">User Details</h2>
+
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 0; font-weight: bold; color: #374151;">Username:</td>
+              <td style="padding: 12px 0; color: #1f2937;">${username}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 0; font-weight: bold; color: #374151;">Email:</td>
+              <td style="padding: 12px 0; color: #1f2937;">${email}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 0; font-weight: bold; color: #374151;">User ID:</td>
+              <td style="padding: 12px 0; color: #1f2937; font-family: monospace; font-size: 12px;">${userId}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 0; font-weight: bold; color: #374151;">Registered At:</td>
+              <td style="padding: 12px 0; color: #1f2937;">${new Date(registeredAt).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })} (EAT)</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+              <td style="padding: 12px 0; font-weight: bold; color: #374151;">IP Address:</td>
+              <td style="padding: 12px 0; color: #1f2937; font-family: monospace;">${ipAddress}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; font-weight: bold; color: #374151;">Device/Browser:</td>
+              <td style="padding: 12px 0; color: #1f2937; font-size: 12px;">${userAgent}</td>
+            </tr>
+          </table>
+
+          <div style="margin-top: 30px; padding: 15px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 5px;">
+            <p style="margin: 0; color: #92400e;">
+              <strong>⚠️ Security Notice:</strong> This is a real money gaming platform.
+              Please verify this user's identity if any suspicious activity is detected.
+            </p>
+          </div>
+
+          <div style="margin-top: 20px; padding: 15px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 5px;">
+            <p style="margin: 0; color: #1e40af;">
+              <strong>📊 Action Required:</strong> Monitor this user's initial transactions and gameplay for security compliance.
+            </p>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px;">
+          <p>Ludomania Security System | ${new Date().getFullYear()}</p>
+          <p>This is an automated security notification</p>
+        </div>
+      </div>
     `,
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('New user notification sent');
+    console.log('✅ Detailed new user notification sent to admin');
   } catch (error) {
-    console.error('Error sending new user notification:', error);
+    console.error('❌ Error sending new user notification:', error);
+    throw error;
   }
 }
 
