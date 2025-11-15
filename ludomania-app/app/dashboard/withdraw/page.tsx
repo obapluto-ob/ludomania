@@ -70,10 +70,13 @@ export default function WithdrawPage() {
           payment_method: 'mpesa',
           mpesa_number: mpesaNumber,
           mpesa_name: mpesaName,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         });
 
       if (txError) {
-        throw new Error('Failed to create withdrawal request');
+        console.error('Transaction error:', txError);
+        throw new Error(txError.message || 'Failed to create withdrawal request');
       }
 
       // Send admin notification

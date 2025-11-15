@@ -12,6 +12,8 @@ export default function FreeGamePage() {
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [playerCount, setPlayerCount] = useState<2 | 3 | 4>(2);
+  const [playWithBot, setPlayWithBot] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -55,6 +57,8 @@ export default function FreeGamePage() {
           wager: 0,
           status: 'waiting',
           created_by: userId,
+          max_players: playerCount,
+          has_bot: playWithBot,
         })
         .select()
         .single();
@@ -74,11 +78,27 @@ export default function FreeGamePage() {
 
       if (playerError) throw playerError;
 
+      // If playing with bot, add bot player
+      if (playWithBot) {
+        const { error: botError } = await supabase
+          .from('game_players')
+          .insert({
+            room_id: room.id,
+            user_id: userId, // Use same user_id but mark as bot
+            color: 'yellow',
+            position: 2,
+            is_ready: true,
+            is_bot: true,
+          });
+
+        if (botError) console.error('Bot error:', botError);
+      }
+
       setRoomCode(code);
 
       // Redirect to game room after 2 seconds
       setTimeout(() => {
-        router.push(`/dashboard/games/room/${room.id}`);
+        router.push(`/dashboard/games/room/${room.id}?players=${playerCount}&bot=${playWithBot}`);
       }, 2000);
     } catch (error: any) {
       console.error('Error creating room:', error);
@@ -199,6 +219,46 @@ export default function FreeGamePage() {
             <p className="text-gray-400 mb-6">
               Create a new game room and invite your friends to join using the room code.
             </p>
+
+            {!roomCode && (
+              <>
+                {/* Player Count Selection */}
+                <div className="mb-6">
+                  <label className="block text-gray-300 font-medium mb-3">Number of Players</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[2, 3, 4].map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => setPlayerCount(count as 2 | 3 | 4)}
+                        className={`py-3 rounded-lg font-bold transition ${
+                          playerCount === count
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        {count} Players
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bot Option */}
+                <div className="mb-6">
+                  <label className="flex items-center gap-3 cursor-pointer bg-slate-700 p-4 rounded-lg hover:bg-slate-600 transition">
+                    <input
+                      type="checkbox"
+                      checked={playWithBot}
+                      onChange={(e) => setPlayWithBot(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="flex-1">
+                      <p className="text-white font-semibold">Play with Bot</p>
+                      <p className="text-gray-400 text-sm">Add a computer player if you want to play alone</p>
+                    </div>
+                  </label>
+                </div>
+              </>
+            )}
 
             {roomCode ? (
               <div className="bg-gradient-to-r from-emerald-900/50 to-green-900/50 border border-emerald-700 rounded-xl p-6 mb-6">

@@ -109,10 +109,13 @@ export default function DepositPage() {
           mpesa_number: mpesaNumber,
           mpesa_name: mpesaName,
           proof_url: proofUrl,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         });
 
       if (txError) {
-        throw new Error('Failed to create transaction');
+        console.error('Transaction error:', txError);
+        throw new Error(txError.message || 'Failed to create transaction');
       }
 
       // Send admin notification
