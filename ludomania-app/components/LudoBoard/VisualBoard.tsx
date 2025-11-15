@@ -159,12 +159,14 @@ export default function VisualBoard({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-900 via-yellow-900 to-amber-950 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-white mb-2">Ludomania</h1>
-          <p className="text-gray-300">
+          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 mb-2 drop-shadow-lg">
+            Ludomania
+          </h1>
+          <p className="text-amber-200 text-lg font-semibold">
             {isMyTurn ? "🎲 Your Turn!" : `Waiting for ${currentPlayer?.username}...`}
           </p>
         </div>
@@ -185,10 +187,17 @@ export default function VisualBoard({
 
           {/* Board */}
           <div className="relative">
-            <div className="bg-gradient-to-br from-amber-100 to-yellow-50 p-4 rounded-2xl shadow-2xl border-4 border-amber-900">
-              <div className="grid grid-cols-15 gap-0 relative">
-                {renderBoard()}
-                {renderTokens()}
+            {/* Wooden board with texture */}
+            <div className="bg-gradient-to-br from-amber-800 via-yellow-700 to-amber-900 p-6 rounded-3xl shadow-2xl border-8 border-amber-950 relative overflow-hidden">
+              {/* Wood grain effect */}
+              <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0id29vZCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjOEI0NTEzIi8+PHBhdGggZD0iTTAgMEwyMDAgMjAwTTIwMCAwTDAgMjAwIiBzdHJva2U9IiM2QjM0MTAiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiLz48L3N2Zz4=')]"></div>
+
+              {/* Inner playing area */}
+              <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 p-4 rounded-2xl shadow-inner border-4 border-amber-700 relative">
+                <div className="grid grid-cols-15 gap-0 relative">
+                  {renderBoard()}
+                  {renderTokens()}
+                </div>
               </div>
             </div>
 

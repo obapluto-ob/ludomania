@@ -47,35 +47,39 @@ export const START_POSITIONS: Record<PlayerColor, number> = {
   yellow: 39,
 };
 
-// Color schemes for each player
+// Color schemes for each player - Rich, vibrant colors for wooden board
 export const COLOR_SCHEMES = {
   red: {
-    primary: '#EF4444',
+    primary: '#DC2626',
     light: '#FCA5A5',
-    dark: '#991B1B',
-    gradient: 'from-red-600 to-red-800',
-    glow: 'shadow-red-500/50',
+    dark: '#7F1D1D',
+    gradient: 'from-red-600 via-red-700 to-red-900',
+    glow: 'shadow-red-600/60',
+    accent: '#FBBF24', // Gold accent
   },
   blue: {
-    primary: '#3B82F6',
+    primary: '#2563EB',
     light: '#93C5FD',
     dark: '#1E3A8A',
-    gradient: 'from-blue-600 to-blue-800',
-    glow: 'shadow-blue-500/50',
+    gradient: 'from-blue-600 via-blue-700 to-blue-900',
+    glow: 'shadow-blue-600/60',
+    accent: '#D1D5DB', // Silver accent
   },
   green: {
-    primary: '#10B981',
+    primary: '#059669',
     light: '#6EE7B7',
-    dark: '#065F46',
-    gradient: 'from-green-600 to-green-800',
-    glow: 'shadow-green-500/50',
+    dark: '#064E3B',
+    gradient: 'from-green-600 via-green-700 to-green-900',
+    glow: 'shadow-green-600/60',
+    accent: '#FBBF24', // Gold accent
   },
   yellow: {
-    primary: '#F59E0B',
-    light: '#FCD34D',
-    dark: '#92400E',
-    gradient: 'from-yellow-600 to-yellow-800',
-    glow: 'shadow-yellow-500/50',
+    primary: '#EAB308',
+    light: '#FDE047',
+    dark: '#713F12',
+    gradient: 'from-yellow-500 via-yellow-600 to-yellow-800',
+    glow: 'shadow-yellow-600/60',
+    accent: '#CD7F32', // Bronze accent
   },
 };
 

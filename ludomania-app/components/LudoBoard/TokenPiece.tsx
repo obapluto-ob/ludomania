@@ -67,19 +67,20 @@ export default function TokenPiece({
     flex items-center justify-center
     cursor-pointer
     transform transition-all duration-500
-    ${isAnimating ? 'scale-110' : 'scale-100'}
-    ${isValid ? 'ring-4 ring-white ring-opacity-75 animate-pulse' : ''}
-    ${isSelected ? 'scale-125 ring-4 ring-yellow-400' : ''}
-    ${!isValid && !isSelected ? 'hover:scale-110' : ''}
+    ${isAnimating ? 'scale-110 rotate-[360deg]' : 'scale-100'}
+    ${isValid ? 'ring-4 ring-amber-300 ring-opacity-90 animate-pulse' : ''}
+    ${isSelected ? 'scale-125 ring-4 ring-yellow-400 shadow-2xl' : ''}
+    ${!isValid && !isSelected ? 'hover:scale-110 hover:shadow-xl' : ''}
   `;
 
   const tokenStyle = {
     gridColumn: gridColumn,
     gridRow: gridRow,
-    background: `linear-gradient(135deg, ${colorScheme.light} 0%, ${colorScheme.primary} 50%, ${colorScheme.dark} 100%)`,
+    background: `radial-gradient(circle at 30% 30%, ${colorScheme.light} 0%, ${colorScheme.primary} 40%, ${colorScheme.dark} 100%)`,
     boxShadow: isValid || isSelected
-      ? `0 0 20px ${colorScheme.primary}, 0 4px 6px rgba(0,0,0,0.3)`
-      : `0 4px 6px rgba(0,0,0,0.3)`,
+      ? `0 0 25px ${colorScheme.primary}, 0 8px 15px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.4)`
+      : `0 6px 12px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.3)`,
+    border: `2px solid ${colorScheme.dark}`,
   };
 
   return (
@@ -88,31 +89,41 @@ export default function TokenPiece({
       style={tokenStyle}
       onClick={onClick}
     >
-      {/* Inner circle */}
+      {/* Glossy highlight effect */}
+      <div className="absolute top-1 left-1 w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full bg-white opacity-40 blur-sm"></div>
+
+      {/* Inner circle with gem effect */}
       <div
-        className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-white shadow-inner flex items-center justify-center"
+        className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-white via-gray-100 to-gray-300 shadow-inner flex items-center justify-center border-2"
+        style={{ borderColor: colorScheme.dark }}
       >
         <div
-          className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full"
-          style={{ backgroundColor: colorScheme.primary }}
+          className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full shadow-lg"
+          style={{
+            background: `radial-gradient(circle at 35% 35%, ${colorScheme.light}, ${colorScheme.primary})`,
+            boxShadow: `inset 0 1px 2px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.3)`
+          }}
         ></div>
       </div>
 
       {/* Glow effect for valid moves */}
       {isValid && (
-        <div
-          className="absolute inset-0 rounded-full animate-ping opacity-75"
-          style={{ backgroundColor: colorScheme.primary }}
-        ></div>
+        <>
+          <div
+            className="absolute inset-0 rounded-full animate-ping opacity-75"
+            style={{ backgroundColor: colorScheme.primary }}
+          ></div>
+          <div className="absolute -inset-2 rounded-full bg-yellow-400 opacity-20 animate-pulse"></div>
+        </>
       )}
 
-      {/* Particle effect for selected token */}
+      {/* Sparkle effect for selected token */}
       {isSelected && (
         <>
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
-          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-yellow-400 rounded-full animate-bounce delay-100"></div>
-          <div className="absolute -top-1 -left-1 w-2 h-2 bg-yellow-400 rounded-full animate-bounce delay-200"></div>
-          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-bounce delay-300"></div>
+          <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full animate-bounce shadow-lg shadow-yellow-400"></div>
+          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-yellow-300 rounded-full animate-bounce delay-100 shadow-lg shadow-yellow-400"></div>
+          <div className="absolute -top-1 -left-1 w-2 h-2 bg-yellow-300 rounded-full animate-bounce delay-200 shadow-lg shadow-yellow-400"></div>
+          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-300 rounded-full animate-bounce delay-300 shadow-lg shadow-yellow-400"></div>
         </>
       )}
     </div>

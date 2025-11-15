@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import VisualBoard from './VisualBoard';
 import { GameState, Player, Token, PlayerColor } from './types';
 import { VoiceRoom } from '../VoiceChat';
+import { LudoBotAI } from '@/lib/bot-ai';
 
 interface GameAdapterProps {
   socket: Socket | null;
@@ -83,10 +84,17 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
     setPlayerProgress(progress);
   }, [gameState.players]);
 
-  // Create voice room when component mounts
+  // Check if game has bot players
+  const hasBot = gameState.players.some((p: any) => p.isBot);
+
+  // Create voice room when component mounts (only for real multiplayer)
   useEffect(() => {
-    createVoiceRoom();
-  }, []);
+    if (!hasBot && gameState.players.length > 0) {
+      createVoiceRoom();
+    } else if (hasBot) {
+      console.log('🤖 Bot game detected - voice chat disabled');
+    }
+  }, [gameState.players.length]);
 
   const createVoiceRoom = async () => {
     try {
@@ -100,6 +108,7 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
         const data = await response.json();
         setVoiceRoomUrl(data.roomUrl);
         setVoiceEnabled(true);
+        console.log('✅ Voice chat enabled for multiplayer game');
       } else {
         console.error('Failed to create voice room');
       }
@@ -153,6 +162,15 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
         ...prev,
         diceValue: data.diceValue,
       }));
+
+      // Check if it's bot's turn and auto-play
+      const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+      if (currentPlayer && (currentPlayer as any).isBot) {
+        console.log('🤖 Bot turn detected, calculating move...');
+        setTimeout(() => {
+          handleBotMove(currentPlayer, data.diceValue);
+        }, 1500); // 1.5 second delay for realism
+      }
     });
 
     // Handle token movement
@@ -191,8 +209,20 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
       });
 
       // Update turn
-      const isMyTurn = gameState.players[(gameState.currentPlayerIndex + 1) % gameState.players.length]?.id === userId;
+      const nextPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+      const nextPlayer = gameState.players[nextPlayerIndex];
+      const isMyTurn = nextPlayer?.id === userId;
       setCanRoll(isMyTurn);
+
+      // Auto-roll for bot
+      if (nextPlayer && (nextPlayer as any).isBot) {
+        console.log('🤖 Bot turn, auto-rolling dice...');
+        setTimeout(() => {
+          if (socket) {
+            socket.emit('roll-dice', { gameId });
+          }
+        }, 1000); // 1 second delay before rolling
+      }
     });
 
     // Handle game end
@@ -216,6 +246,46 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
     if (!socket || !canRoll) return;
     socket.emit('roll-dice', { gameId });
     setCanRoll(false);
+  };
+
+  const handleBotMove = (botPlayer: Player, diceValue: number) => {
+    if (!socket) return;
+
+    // Use bot AI to choose best move
+    const tokenId = LudoBotAI.chooseBestMove(botPlayer, diceValue, gameState.players);
+
+    if (tokenId === null) {
+      console.log('🤖 Bot has no valid moves');
+      // No valid moves, skip turn
+      socket.emit('skip-turn', { gameId, playerId: botPlayer.id });
+      return;
+    }
+
+    // Execute bot move
+    const token = botPlayer.tokens[tokenId];
+    let newPosition = token.position;
+
+    if (token.isHome && diceValue === 6) {
+      // Move out of home
+      const startPositions: Record<PlayerColor, number> = {
+        red: 0,
+        blue: 13,
+        green: 26,
+        yellow: 39,
+      };
+      newPosition = startPositions[botPlayer.color];
+    } else if (!token.isHome) {
+      newPosition = token.position + diceValue;
+    }
+
+    console.log(`🤖 Bot moving token ${tokenId} to position ${newPosition}`);
+
+    socket.emit('move-token', {
+      gameId,
+      playerId: botPlayer.id,
+      tokenId,
+      newPosition,
+    });
   };
 
   const handleMoveToken = (tokenId: number) => {
