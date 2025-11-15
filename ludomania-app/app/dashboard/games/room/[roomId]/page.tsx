@@ -64,7 +64,7 @@ export default function GameRoomPage() {
         if (payload.new.status === 'playing') {
           // Game started - redirect to game board
           console.log('🎮 Game started! Redirecting to game board...');
-          router.push(`/dashboard/games/play/${roomId}`);
+          router.push(`/game/play/${roomId}?room=${payload.new.room_code}`);
         }
       })
       .subscribe();
@@ -185,7 +185,7 @@ export default function GameRoomPage() {
               // Redirect to game board immediately
               console.log('🎮 Redirecting to game board...');
               setTimeout(() => {
-                router.push(`/dashboard/games/play/${roomId}`);
+                router.push(`/game/play/${roomId}?room=${room.room_code}`);
               }, 500);
             }
           }

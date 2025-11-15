@@ -60,9 +60,9 @@ export default function GamePlayPage() {
       setUsername(profile.username);
     }
 
-    // Get game info
+    // Get game info from game_rooms table
     const { data: game, error: gameError } = await supabase
-      .from('games')
+      .from('game_rooms')
       .select('*')
       .eq('id', gameId)
       .single();
@@ -73,10 +73,26 @@ export default function GamePlayPage() {
       return;
     }
 
-    setGameInfo(game);
+    // Get players
+    const { data: players } = await supabase
+      .from('game_players')
+      .select('*')
+      .eq('room_id', gameId);
 
-    // Check if both players are in
-    if (game.player2_id) {
+    // Convert to old format for compatibility
+    const gameInfo = {
+      id: game.id,
+      room_code: game.room_code,
+      wager_amount: game.wager || 0,
+      status: game.status,
+      player1_id: game.created_by,
+      player2_id: players && players.length > 1 ? players[1].user_id : undefined,
+    };
+
+    setGameInfo(gameInfo);
+
+    // Check if game is ready to play
+    if (game.status === 'playing') {
       setWaitingForPlayer(false);
     }
 
