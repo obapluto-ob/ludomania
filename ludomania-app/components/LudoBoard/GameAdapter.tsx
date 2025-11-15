@@ -32,6 +32,56 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   const [canRoll, setCanRoll] = useState(false);
   const [voiceRoomUrl, setVoiceRoomUrl] = useState<string | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [playerProgress, setPlayerProgress] = useState<Record<string, number>>({});
+
+  // Calculate player progress (0-100%)
+  const calculatePlayerProgress = (player: Player): number => {
+    const BOARD_SIZE = 52;
+    const FINISH_START = 52;
+    const START_POSITIONS: Record<PlayerColor, number> = {
+      red: 0,
+      blue: 13,
+      green: 26,
+      yellow: 39,
+    };
+
+    let totalProgress = 0;
+
+    player.tokens.forEach((token) => {
+      if (token.isFinished) {
+        totalProgress += 25; // Each finished token = 25%
+      } else if (token.isHome) {
+        totalProgress += 0; // Token at home = 0%
+      } else {
+        const startPos = START_POSITIONS[player.color];
+        let distanceTraveled = 0;
+
+        if (token.position >= FINISH_START) {
+          // In finish lane
+          const finishProgress = token.position - FINISH_START;
+          distanceTraveled = BOARD_SIZE + finishProgress;
+        } else {
+          // On main board
+          distanceTraveled = (token.position - startPos + BOARD_SIZE) % BOARD_SIZE;
+        }
+
+        // Total journey = 58 steps (52 main + 6 finish)
+        const tokenProgress = (distanceTraveled / 58) * 25;
+        totalProgress += tokenProgress;
+      }
+    });
+
+    return Math.round(totalProgress * 10) / 10;
+  };
+
+  // Update progress whenever game state changes
+  useEffect(() => {
+    const progress: Record<string, number> = {};
+    gameState.players.forEach((player) => {
+      progress[player.id] = calculatePlayerProgress(player);
+    });
+    setPlayerProgress(progress);
+  }, [gameState.players]);
 
   // Create voice room when component mounts
   useEffect(() => {
@@ -239,6 +289,7 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
         onRollDice={handleRollDice}
         onMoveToken={handleMoveToken}
         canRoll={canRoll}
+        playerProgress={playerProgress}
       />
 
       {/* Voice Chat */}

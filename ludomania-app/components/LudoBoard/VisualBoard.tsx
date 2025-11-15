@@ -13,6 +13,7 @@ interface VisualBoardProps {
   onRollDice: () => void;
   onMoveToken: (tokenId: number) => void;
   canRoll: boolean;
+  playerProgress?: Record<string, number>; // Progress percentage for each player
 }
 
 export default function VisualBoard({
@@ -21,6 +22,7 @@ export default function VisualBoard({
   onRollDice,
   onMoveToken,
   canRoll,
+  playerProgress = {},
 }: VisualBoardProps) {
   const [selectedToken, setSelectedToken] = useState<number | null>(null);
   const [validMoves, setValidMoves] = useState<number[]>([]);
@@ -176,6 +178,7 @@ export default function VisualBoard({
                 player={player}
                 isCurrentTurn={player.id === currentPlayer?.id}
                 isYou={player.id === currentUserId}
+                progress={playerProgress[player.id] || 0}
               />
             ))}
           </div>
@@ -208,6 +211,7 @@ export default function VisualBoard({
                 player={player}
                 isCurrentTurn={player.id === currentPlayer?.id}
                 isYou={player.id === currentUserId}
+                progress={playerProgress[player.id] || 0}
               />
             ))}
           </div>

@@ -6,11 +6,12 @@ interface PlayerPanelProps {
   player: Player;
   isCurrentTurn: boolean;
   isYou: boolean;
+  progress?: number; // Progress percentage (0-100)
 }
 
-export default function PlayerPanel({ player, isCurrentTurn, isYou }: PlayerPanelProps) {
+export default function PlayerPanel({ player, isCurrentTurn, isYou, progress = 0 }: PlayerPanelProps) {
   const colorScheme = COLOR_SCHEMES[player.color];
-  
+
   const tokensHome = player.tokens.filter(t => t.isHome).length;
   const tokensFinished = player.tokens.filter(t => t.isFinished).length;
   const tokensInPlay = player.tokens.length - tokensHome - tokensFinished;
@@ -53,6 +54,31 @@ export default function PlayerPanel({ player, isCurrentTurn, isYou }: PlayerPane
             <span className="text-green-400 text-xs font-semibold">Turn</span>
           </div>
         )}
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-gray-400 text-xs font-semibold">Progress</span>
+          <span className="text-white text-sm font-bold">{progress.toFixed(1)}%</span>
+        </div>
+        <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progress}%`,
+              background: `linear-gradient(90deg, ${colorScheme.primary} 0%, ${colorScheme.light} 100%)`,
+            }}
+          >
+            {progress >= 10 && (
+              <div className="w-full h-full flex items-center justify-end pr-1">
+                <span className="text-white text-[10px] font-bold drop-shadow">
+                  {progress >= 100 ? '🏆' : ''}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Token Status */}

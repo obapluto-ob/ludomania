@@ -189,5 +189,58 @@ export class LudoEngine {
   getCurrentPlayer(): Player {
     return this.state.players[this.state.currentPlayerIndex];
   }
+
+  /**
+   * Calculate player's progress percentage (0-100%)
+   * Each token contributes 25% to total progress
+   * Token progress: Home (0%) → Start (0%) → Finish Lane Entry (21.875%) → Finished (25%)
+   */
+  getPlayerProgress(playerId: string): number {
+    const player = this.state.players.find((p) => p.id === playerId);
+    if (!player) return 0;
+
+    let totalProgress = 0;
+
+    player.tokens.forEach((token) => {
+      if (token.isFinished) {
+        // Token finished = 25% contribution
+        totalProgress += 25;
+      } else if (token.isHome) {
+        // Token at home = 0% contribution
+        totalProgress += 0;
+      } else {
+        // Token on board: calculate progress
+        const startPos = START_POSITIONS[player.color];
+        let distanceTraveled = 0;
+
+        if (token.position >= FINISH_START) {
+          // In finish lane (positions 52-57)
+          const finishProgress = token.position - FINISH_START; // 0-5
+          distanceTraveled = BOARD_SIZE + finishProgress; // 52 + (0-5) = 52-57
+        } else {
+          // On main board (positions 0-51)
+          distanceTraveled = (token.position - startPos + BOARD_SIZE) % BOARD_SIZE;
+        }
+
+        // Total journey = 52 (main board) + 6 (finish lane) = 58 steps
+        // Each token contributes max 25%, so: (distanceTraveled / 58) * 25
+        const tokenProgress = (distanceTraveled / 58) * 25;
+        totalProgress += tokenProgress;
+      }
+    });
+
+    return Math.round(totalProgress * 10) / 10; // Round to 1 decimal place
+  }
+
+  /**
+   * Get progress for all players
+   */
+  getAllPlayersProgress(): Record<string, number> {
+    const progress: Record<string, number> = {};
+    this.state.players.forEach((player) => {
+      progress[player.id] = this.getPlayerProgress(player.id);
+    });
+    return progress;
+  }
 }
 
