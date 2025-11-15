@@ -9,12 +9,10 @@
 INSERT INTO profiles (
   id,
   username,
-  email,
-  phone_number,
   wallet_balance,
   locked_balance,
-  total_games_played,
-  total_games_won,
+  penalty_count,
+  total_fees_paid,
   email_verified,
   verified_at,
   created_at
@@ -22,8 +20,6 @@ INSERT INTO profiles (
 VALUES (
   '00000000-0000-0000-0000-000000000000',
   'Bot',
-  'bot@ludomania.com',
-  '+254700000000',
   0,
   0,
   0,
@@ -34,7 +30,7 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET
   username = 'Bot',
-  email = 'bot@ludomania.com';
+  email_verified = true;
 
 -- ============================================
 -- VERIFICATION
@@ -42,6 +38,17 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Check bot profile exists
 SELECT * FROM profiles WHERE id = '00000000-0000-0000-0000-000000000000';
+
+-- Show bot profile details
+SELECT
+  id,
+  username,
+  wallet_balance,
+  locked_balance,
+  email_verified,
+  created_at
+FROM profiles
+WHERE id = '00000000-0000-0000-0000-000000000000';
 
 -- ============================================
 -- DONE! ✅
