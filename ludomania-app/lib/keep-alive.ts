@@ -51,12 +51,21 @@ async function pingBackend() {
 
     if (response.ok) {
       const data = await response.json();
-      console.log('✅ Backend ping successful:', data.timestamp);
+
+      if (data.success) {
+        console.log('✅ Backend ping successful:', data.timestamp);
+      } else {
+        // Backend not running (e.g., localhost) - don't spam console
+        if (!data.message?.includes('localhost')) {
+          console.warn('⚠️ Backend not available:', data.message);
+        }
+      }
     } else {
       console.warn('⚠️ Backend ping failed:', response.status);
     }
   } catch (error) {
-    console.error('❌ Backend ping error:', error);
+    // Silently fail - don't spam console with errors
+    // Backend might not be running in development
   }
 }
 

@@ -9,11 +9,19 @@ export async function GET(request: NextRequest) {
     const backendUrl = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL;
 
     if (!backendUrl) {
+      console.warn('⚠️ Backend URL not configured - skipping ping');
       return NextResponse.json(
-        { error: 'Backend URL not configured' },
-        { status: 500 }
+        {
+          success: false,
+          message: 'Backend URL not configured',
+          timestamp: new Date().toISOString(),
+        },
+        { status: 200 } // Return 200 to avoid console errors
       );
     }
+
+    // Check if backend is localhost and might not be running
+    const isLocalhost = backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1');
 
     // Ping the backend ping endpoint (keeps Render awake)
     const response = await fetch(`${backendUrl}/ping`, {
@@ -21,6 +29,8 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add timeout for localhost
+      signal: isLocalhost ? AbortSignal.timeout(2000) : undefined,
     });
 
     if (response.ok) {
@@ -32,6 +42,7 @@ export async function GET(request: NextRequest) {
         timestamp: new Date().toISOString(),
       });
     } else {
+      console.warn(`⚠️ Backend ping failed with status ${response.status}`);
       return NextResponse.json(
         {
           success: false,
@@ -39,19 +50,26 @@ export async function GET(request: NextRequest) {
           status: response.status,
           timestamp: new Date().toISOString(),
         },
-        { status: 500 }
+        { status: 200 } // Return 200 to avoid console errors
       );
     }
   } catch (error: any) {
-    console.error('Keep-alive ping failed:', error);
+    // Don't log error if it's just localhost not running
+    const backendUrl = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || '';
+    const isLocalhost = backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1');
+
+    if (!isLocalhost) {
+      console.error('Keep-alive ping failed:', error);
+    }
+
     return NextResponse.json(
       {
         success: false,
-        message: 'Failed to ping backend',
+        message: isLocalhost ? 'Backend not running (localhost)' : 'Failed to ping backend',
         error: error.message,
         timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 200 } // Return 200 to avoid console errors
     );
   }
 }
