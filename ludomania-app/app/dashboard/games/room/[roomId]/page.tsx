@@ -40,9 +40,13 @@ export default function GameRoomPage() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    checkUser();
-    fetchRoomData();
-    
+    const init = async () => {
+      await checkUser();
+      await fetchRoomData();
+    };
+
+    init();
+
     // Subscribe to real-time updates
     const channel = supabase
       .channel(`room-${roomId}`)
@@ -51,7 +55,8 @@ export default function GameRoomPage() {
         schema: 'public',
         table: 'game_players',
         filter: `room_id=eq.${roomId}`,
-      }, () => {
+      }, (payload) => {
+        console.log('👥 Player update detected:', payload);
         fetchRoomData();
       })
       .on('postgres_changes', {
@@ -60,6 +65,7 @@ export default function GameRoomPage() {
         table: 'game_rooms',
         filter: `id=eq.${roomId}`,
       }, (payload) => {
+        console.log('🎮 Room update detected:', payload);
         setRoom(payload.new as GameRoom);
         if (payload.new.status === 'playing') {
           // Game started - redirect to game board
@@ -67,9 +73,12 @@ export default function GameRoomPage() {
           router.push(`/game/play/${roomId}?room=${payload.new.room_code}`);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
 
     return () => {
+      console.log('🔌 Unsubscribing from room updates');
       supabase.removeChannel(channel);
     };
   }, [roomId]);
@@ -85,6 +94,8 @@ export default function GameRoomPage() {
 
   const fetchRoomData = async () => {
     try {
+      console.log('📊 Fetching room data for room:', roomId);
+
       // Fetch room details
       const { data: roomData, error: roomError } = await supabase
         .from('game_rooms')
@@ -94,6 +105,7 @@ export default function GameRoomPage() {
 
       if (roomError) throw roomError;
       setRoom(roomData);
+      console.log('🏠 Room data:', roomData);
 
       // Fetch players WITHOUT profile join (we'll handle it separately)
       const { data: playersData, error: playersError } = await supabase
@@ -103,6 +115,7 @@ export default function GameRoomPage() {
         .order('position');
 
       if (playersError) throw playersError;
+      console.log('👥 Players data:', playersData);
 
       // Process players and fetch profiles only for real users
       const processedPlayers = await Promise.all(
@@ -130,12 +143,14 @@ export default function GameRoomPage() {
       );
 
       setPlayers(processedPlayers);
+      console.log('✅ Processed players:', processedPlayers);
 
       // Check if current user is ready
       const currentPlayer = playersData?.find(p => p.user_id === userId && !p.is_bot);
       setIsReady(currentPlayer?.is_ready || false);
+      console.log('🎮 Current user ready status:', currentPlayer?.is_ready);
     } catch (error) {
-      console.error('Error fetching room data:', error);
+      console.error('❌ Error fetching room data:', error);
     } finally {
       setLoading(false);
     }
@@ -144,6 +159,7 @@ export default function GameRoomPage() {
   const toggleReady = async () => {
     try {
       const newReadyState = !isReady;
+      console.log('🎮 Toggling ready state to:', newReadyState);
 
       const { error } = await supabase
         .from('game_players')
@@ -154,25 +170,25 @@ export default function GameRoomPage() {
       if (error) throw error;
       setIsReady(newReadyState);
 
-      // Auto-start game if:
-      // 1. User just became ready
-      // 2. Room has a bot
-      // 3. Max players is 2 (user + bot)
-      // 4. User is the host
-      if (newReadyState && room?.has_bot && room?.max_players === 2 && room?.created_by === userId) {
-        // Check if we have exactly 2 players (user + bot)
+      // Check if we should auto-start the game
+      if (newReadyState) {
+        // Fetch current players to check if all are ready
         const { data: currentPlayers } = await supabase
           .from('game_players')
           .select('*')
           .eq('room_id', roomId);
 
-        if (currentPlayers && currentPlayers.length === 2) {
-          // Check if all players are ready (user just became ready, bot is always ready)
+        console.log('👥 Current players after ready toggle:', currentPlayers);
+
+        if (currentPlayers && currentPlayers.length >= 2) {
+          // Check if all players are ready
           const allReady = currentPlayers.every(p => p.is_ready);
+          console.log('✅ All players ready?', allReady);
 
           if (allReady) {
             // Auto-start the game!
-            console.log('🤖 Bot game auto-starting...');
+            console.log('🎮 All players ready - auto-starting game...');
+
             const { error: updateError } = await supabase
               .from('game_rooms')
               .update({
@@ -181,18 +197,20 @@ export default function GameRoomPage() {
               })
               .eq('id', roomId);
 
-            if (!updateError) {
+            if (!updateError && room) {
+              console.log('✅ Game started successfully!');
               // Redirect to game board immediately
-              console.log('🎮 Redirecting to game board...');
               setTimeout(() => {
                 router.push(`/game/play/${roomId}?room=${room.room_code}`);
               }, 500);
+            } else {
+              console.error('❌ Error starting game:', updateError);
             }
           }
         }
       }
     } catch (error) {
-      console.error('Error toggling ready:', error);
+      console.error('❌ Error toggling ready:', error);
     }
   };
 
@@ -212,6 +230,8 @@ export default function GameRoomPage() {
     }
 
     try {
+      console.log('🎮 Starting game...');
+
       const { error } = await supabase
         .from('game_rooms')
         .update({
@@ -222,9 +242,15 @@ export default function GameRoomPage() {
 
       if (error) throw error;
 
-      alert('Game starting! Full game board coming soon...');
+      console.log('✅ Game status updated to playing');
+
+      // Redirect immediately (real-time subscription will also trigger redirect for other players)
+      setTimeout(() => {
+        router.push(`/game/play/${roomId}?room=${room.room_code}`);
+      }, 500);
     } catch (error) {
       console.error('Error starting game:', error);
+      alert('Failed to start game. Please try again.');
     }
   };
 
