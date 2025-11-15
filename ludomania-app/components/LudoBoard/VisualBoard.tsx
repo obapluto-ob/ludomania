@@ -72,20 +72,32 @@ export default function VisualBoard({
     }
   };
 
+  // Helper to get home zone background color
+  const getHomeZoneBackground = (x: number, y: number): string | null => {
+    if (x >= 0 && x <= 5 && y >= 9 && y <= 14) return 'red';
+    if (x >= 0 && x <= 5 && y >= 0 && y <= 5) return 'blue';
+    if (x >= 9 && x <= 14 && y >= 0 && y <= 5) return 'green';
+    if (x >= 9 && x <= 14 && y >= 9 && y <= 14) return 'yellow';
+    return null;
+  };
+
   // Render the 15x15 grid board
   const renderBoard = () => {
     const grid = [];
-    const cellSize = 'w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14';
+    const cellSize = 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14';
 
     for (let y = 0; y < 15; y++) {
       for (let x = 0; x < 15; x++) {
         const key = `${x}-${y}`;
-        
+
         // Determine cell type
         let cellType: 'path' | 'home' | 'finish' | 'center' | 'empty' = 'empty';
         let color: PlayerColor | null = null;
         let isSafe = false;
         let pathIndex = -1;
+
+        // Check if in home zone area (for background color)
+        const homeZoneBg = getHomeZoneBackground(x, y);
 
         // Check if it's a path square
         pathIndex = PATH_COORDINATES.findIndex(coord => coord.x === x && coord.y === y);
@@ -94,12 +106,34 @@ export default function VisualBoard({
           isSafe = BOARD_CONFIG.SAFE_POSITIONS.includes(pathIndex);
         }
 
-        // Check if it's a home zone
-        for (const [playerColor, zones] of Object.entries(HOME_ZONES)) {
-          if (zones.some(zone => zone.x === x && zone.y === y)) {
+        // Check if it's a home zone (6x6 areas in corners with colored backgrounds)
+        // Red home zone (bottom-left): 0-5, 9-14
+        if (x >= 0 && x <= 5 && y >= 9 && y <= 14) {
+          if (HOME_ZONES.red.some(zone => zone.x === x && zone.y === y)) {
             cellType = 'home';
-            color = playerColor as PlayerColor;
-            break;
+            color = 'red';
+          }
+          // Don't mark as empty - let it show the colored background
+        }
+        // Blue home zone (top-left): 0-5, 0-5
+        else if (x >= 0 && x <= 5 && y >= 0 && y <= 5) {
+          if (HOME_ZONES.blue.some(zone => zone.x === x && zone.y === y)) {
+            cellType = 'home';
+            color = 'blue';
+          }
+        }
+        // Green home zone (top-right): 9-14, 0-5
+        else if (x >= 9 && x <= 14 && y >= 0 && y <= 5) {
+          if (HOME_ZONES.green.some(zone => zone.x === x && zone.y === y)) {
+            cellType = 'home';
+            color = 'green';
+          }
+        }
+        // Yellow home zone (bottom-right): 9-14, 9-14
+        else if (x >= 9 && x <= 14 && y >= 9 && y <= 14) {
+          if (HOME_ZONES.yellow.some(zone => zone.x === x && zone.y === y)) {
+            cellType = 'home';
+            color = 'yellow';
           }
         }
 
@@ -117,6 +151,18 @@ export default function VisualBoard({
           }
         }
 
+        // Add home zone background color if in home area
+        let bgClass = '';
+        if (homeZoneBg && cellType === 'empty') {
+          const bgColors: Record<string, string> = {
+            red: 'bg-red-200/40',
+            blue: 'bg-blue-200/40',
+            green: 'bg-green-200/40',
+            yellow: 'bg-yellow-200/40',
+          };
+          bgClass = bgColors[homeZoneBg] || '';
+        }
+
         grid.push(
           <BoardSquare
             key={key}
@@ -124,7 +170,7 @@ export default function VisualBoard({
             color={color}
             isSafe={isSafe}
             pathIndex={pathIndex}
-            className={cellSize}
+            className={`${cellSize} ${bgClass}`}
           />
         );
       }
@@ -213,13 +259,13 @@ export default function VisualBoard({
           {/* Board */}
           <div className="relative w-full max-w-2xl mx-auto lg:max-w-none">
             {/* Wooden board with texture */}
-            <div className="bg-gradient-to-br from-amber-800 via-yellow-700 to-amber-900 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl shadow-2xl border-4 sm:border-6 md:border-8 border-amber-950 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950 p-4 sm:p-6 md:p-8 rounded-3xl shadow-2xl border-8 border-amber-950 relative overflow-hidden">
               {/* Wood grain effect */}
-              <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0id29vZCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjOEI0NTEzIi8+PHBhdGggZD0iTTAgMEwyMDAgMjAwTTIwMCAwTDAgMjAwIiBzdHJva2U9IiM2QjM0MTAiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiLz48L3N2Zz4=')]"></div>
+              <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0id29vZCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjOEI0NTEzIi8+PHBhdGggZD0iTTAgMEwyMDAgMjAwTTIwMCAwTDAgMjAwIiBzdHJva2U9IiM2QjM0MTAiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiLz48L3N2Zz4=')]"></div>
 
-              {/* Inner playing area */}
-              <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl shadow-inner border-2 sm:border-3 md:border-4 border-amber-700 relative">
-                <div className="grid grid-cols-15 gap-0 relative aspect-square w-full">
+              {/* Inner playing area - Classic Ludo board background */}
+              <div className="bg-gradient-to-br from-amber-100 via-yellow-50 to-amber-100 p-1 rounded-2xl shadow-inner border-4 border-amber-800 relative">
+                <div className="grid grid-cols-15 gap-[1px] relative aspect-square w-full bg-gray-400">
                   {renderBoard()}
                   {renderTokens()}
                 </div>

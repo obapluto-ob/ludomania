@@ -177,6 +177,9 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
           setTimeout(() => {
             handleBotMove(currentPlayer, data.diceValue);
           }, 1500); // 1.5 second delay for realism
+        } else if (currentPlayer && currentPlayer.id === userId) {
+          // It's the user's turn - they can now select a token to move
+          console.log('✅ Your turn - select a token to move');
         }
 
         return newState;
@@ -218,13 +221,19 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
           ...prev,
           players: updatedPlayers,
           currentPlayerIndex: data.nextPlayerIndex,
-          diceValue: null,
+          diceValue: null, // Clear dice value after move
         };
 
         // Update turn and start timeout
         const nextPlayer = newState.players[data.nextPlayerIndex];
         const isMyTurn = nextPlayer?.id === userId;
+
+        // Enable rolling for next player
         setCanRoll(isMyTurn);
+
+        if (isMyTurn) {
+          console.log('✅ Your turn! You can roll the dice now.');
+        }
 
         // Start 50-second timeout for next player
         const timeout = setTimeout(() => {
@@ -319,6 +328,8 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   const handleRollDice = () => {
     if (!socket || !canRoll) return;
 
+    console.log('🎲 Rolling dice...');
+
     // Clear turn timeout when user manually rolls
     if (turnTimeout) {
       clearTimeout(turnTimeout);
@@ -326,7 +337,8 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
     }
 
     socket.emit('roll-dice', { gameId, playerId: userId });
-    setCanRoll(false);
+    // Don't disable canRoll here - let the server response handle it
+    // This prevents the lag issue where user can't roll again quickly
   };
 
   const handleBotMove = (botPlayer: Player, diceValue: number) => {

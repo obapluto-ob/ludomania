@@ -18,29 +18,43 @@ export default function BoardSquare({
   className = '',
 }: BoardSquareProps) {
   const getSquareStyle = () => {
-    const baseClasses = `relative flex items-center justify-center border-2 transition-all ${className}`;
+    const baseClasses = `relative flex items-center justify-center transition-all ${className}`;
 
     switch (type) {
       case 'path':
-        return `${baseClasses} bg-gradient-to-br from-white via-gray-50 to-gray-100 border-amber-800 hover:bg-yellow-50 shadow-sm`;
+        return `${baseClasses} bg-white border-2 border-gray-300 hover:bg-yellow-50 shadow-inner`;
 
       case 'home':
         if (!color) return `${baseClasses} bg-gray-100 border-gray-300`;
         const homeScheme = COLOR_SCHEMES[color];
-        return `${baseClasses} bg-gradient-to-br ${homeScheme.gradient} border-4 border-amber-900 rounded-full shadow-lg ${homeScheme.glow}`;
+        return `${baseClasses} bg-gradient-to-br ${homeScheme.gradient} border-4 shadow-xl ${homeScheme.glow} rounded-lg`;
 
       case 'finish':
         if (!color) return `${baseClasses} bg-gray-200 border-gray-400`;
         const finishScheme = COLOR_SCHEMES[color];
-        return `${baseClasses} bg-${color}-200 border-${color}-600 border-2 shadow-inner`;
+        // Use inline style for dynamic color
+        return `${baseClasses} border-2 shadow-inner`;
 
       case 'center':
-        return `${baseClasses} bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 border-4 border-amber-950 rounded-xl shadow-2xl`;
+        return `${baseClasses} bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 border-4 border-white shadow-2xl`;
 
       case 'empty':
       default:
         return `${baseClasses} bg-transparent border-transparent`;
     }
+  };
+
+  const getFinishStyle = () => {
+    if (type === 'finish' && color) {
+      const colorMap: Record<PlayerColor, string> = {
+        red: '#DC2626',
+        blue: '#2563EB',
+        green: '#059669',
+        yellow: '#EAB308',
+      };
+      return { backgroundColor: colorMap[color] + '40' }; // 40 = 25% opacity
+    }
+    return {};
   };
 
   const renderContent = () => {
@@ -95,7 +109,7 @@ export default function BoardSquare({
   };
 
   return (
-    <div className={getSquareStyle()}>
+    <div className={getSquareStyle()} style={getFinishStyle()}>
       {renderContent()}
     </div>
   );
