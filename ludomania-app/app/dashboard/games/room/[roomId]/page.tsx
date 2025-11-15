@@ -62,7 +62,9 @@ export default function GameRoomPage() {
       }, (payload) => {
         setRoom(payload.new as GameRoom);
         if (payload.new.status === 'playing') {
-          // Game started - could redirect to game board
+          // Game started - redirect to game board
+          console.log('🎮 Game started! Redirecting to game board...');
+          router.push(`/dashboard/games/play/${roomId}`);
         }
       })
       .subscribe();
@@ -104,10 +106,22 @@ export default function GameRoomPage() {
         .order('position');
 
       if (playersError) throw playersError;
-      setPlayers(playersData || []);
-      
+
+      // Handle bot players - add fake profile
+      const processedPlayers = (playersData || []).map(player => {
+        if (player.is_bot) {
+          return {
+            ...player,
+            profiles: { username: 'Bot' }
+          };
+        }
+        return player;
+      });
+
+      setPlayers(processedPlayers);
+
       // Check if current user is ready
-      const currentPlayer = playersData?.find(p => p.user_id === userId);
+      const currentPlayer = playersData?.find(p => p.user_id === userId && !p.is_bot);
       setIsReady(currentPlayer?.is_ready || false);
     } catch (error) {
       console.error('Error fetching room data:', error);
@@ -147,13 +161,22 @@ export default function GameRoomPage() {
 
           if (allReady) {
             // Auto-start the game!
-            await supabase
+            console.log('🤖 Bot game auto-starting...');
+            const { error: updateError } = await supabase
               .from('game_rooms')
               .update({
                 status: 'playing',
                 started_at: new Date().toISOString(),
               })
               .eq('id', roomId);
+
+            if (!updateError) {
+              // Redirect to game board immediately
+              console.log('🎮 Redirecting to game board...');
+              setTimeout(() => {
+                router.push(`/dashboard/games/play/${roomId}`);
+              }, 500);
+            }
           }
         }
       }

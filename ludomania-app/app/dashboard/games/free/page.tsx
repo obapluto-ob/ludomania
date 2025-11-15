@@ -80,11 +80,14 @@ export default function FreeGamePage() {
 
       // If playing with bot, add bot player
       if (playWithBot) {
+        // Use a special UUID for bot (all zeros)
+        const botUserId = '00000000-0000-0000-0000-000000000000';
+
         const { error: botError } = await supabase
           .from('game_players')
           .insert({
             room_id: room.id,
-            user_id: userId, // Use same user_id but mark as bot
+            user_id: botUserId, // Use special bot UUID
             color: 'yellow',
             position: 2,
             is_ready: true,
