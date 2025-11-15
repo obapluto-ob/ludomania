@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import DailyIframe, { DailyCall, DailyEventObjectParticipant } from '@daily-co/daily-js';
+import DailyIframe, { DailyCall } from '@daily-co/daily-js';
 import { VoiceRoomProps, Participant, ConnectionState } from './types';
 import MicButton from './MicButton';
 import SpeakingIndicator from './SpeakingIndicator';
@@ -86,19 +86,19 @@ export default function VoiceRoom({
     setParticipants(participantsList);
   };
 
-  const handleParticipantJoined = (event: DailyEventObjectParticipant) => {
+  const handleParticipantJoined = () => {
     if (callObject) {
       updateParticipants(callObject);
     }
   };
 
-  const handleParticipantUpdated = (event: DailyEventObjectParticipant) => {
+  const handleParticipantUpdated = () => {
     if (callObject) {
       updateParticipants(callObject);
     }
   };
 
-  const handleParticipantLeft = (event: DailyEventObjectParticipant) => {
+  const handleParticipantLeft = () => {
     if (callObject) {
       updateParticipants(callObject);
     }
