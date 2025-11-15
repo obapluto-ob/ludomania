@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('username, wallet_balance, locked_balance')
+      .select('username, wallet_balance, locked_balance, total_fees_paid')
       .eq('id', userId)
       .single();
 
