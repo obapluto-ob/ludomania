@@ -36,6 +36,7 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [playerProgress, setPlayerProgress] = useState<Record<string, number>>({});
   const [callObject, setCallObject] = useState<DailyCall | null>(null);
+  const [turnTimeout, setTurnTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Calculate player progress (0-100%)
   const calculatePlayerProgress = (player: Player): number => {
@@ -160,23 +161,38 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
 
     // Handle dice roll
     socket.on('dice-rolled', (data) => {
-      setGameState((prev) => ({
-        ...prev,
-        diceValue: data.diceValue,
-      }));
+      console.log('🎲 Dice rolled:', data);
 
-      // Check if it's bot's turn and auto-play
-      const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-      if (currentPlayer && (currentPlayer as any).isBot) {
-        console.log('🤖 Bot turn detected, calculating move...');
-        setTimeout(() => {
-          handleBotMove(currentPlayer, data.diceValue);
-        }, 1500); // 1.5 second delay for realism
-      }
+      setGameState((prev) => {
+        const newState = {
+          ...prev,
+          diceValue: data.diceValue,
+          currentPlayerIndex: data.currentPlayerIndex,
+        };
+
+        // Check if it's bot's turn and auto-play (use fresh state)
+        const currentPlayer = newState.players[newState.currentPlayerIndex];
+        if (currentPlayer && (currentPlayer as any).isBot) {
+          console.log('🤖 Bot turn detected, calculating move...');
+          setTimeout(() => {
+            handleBotMove(currentPlayer, data.diceValue);
+          }, 1500); // 1.5 second delay for realism
+        }
+
+        return newState;
+      });
     });
 
     // Handle token movement
     socket.on('token-moved', (data) => {
+      console.log('🚀 Token moved:', data);
+
+      // Clear any existing turn timeout
+      if (turnTimeout) {
+        clearTimeout(turnTimeout);
+        setTurnTimeout(null);
+      }
+
       setGameState((prev) => {
         const updatedPlayers = prev.players.map((player) => {
           if (player.id === data.playerId) {
@@ -198,63 +214,83 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
           return player;
         });
 
-        // Find next player index
-        const currentIndex = prev.players.findIndex((p) => p.id === data.playerId);
-        const nextIndex = (currentIndex + 1) % prev.players.length;
-
-        return {
+        const newState = {
           ...prev,
           players: updatedPlayers,
-          currentPlayerIndex: nextIndex,
+          currentPlayerIndex: data.nextPlayerIndex,
           diceValue: null,
         };
-      });
 
-      // Update turn
-      const nextPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-      const nextPlayer = gameState.players[nextPlayerIndex];
-      const isMyTurn = nextPlayer?.id === userId;
-      setCanRoll(isMyTurn);
+        // Update turn and start timeout
+        const nextPlayer = newState.players[data.nextPlayerIndex];
+        const isMyTurn = nextPlayer?.id === userId;
+        setCanRoll(isMyTurn);
 
-      // Auto-roll for bot
-      if (nextPlayer && (nextPlayer as any).isBot) {
-        console.log('🤖 Bot turn, auto-rolling dice...');
-        setTimeout(() => {
+        // Start 50-second timeout for next player
+        const timeout = setTimeout(() => {
+          console.log('⏰ Turn timeout - auto-rolling dice');
           if (socket) {
-            socket.emit('roll-dice', { gameId });
+            socket.emit('roll-dice', { gameId, playerId: nextPlayer.id });
           }
-        }, 1000); // 1 second delay before rolling
-      }
+        }, 50000); // 50 seconds
+        setTurnTimeout(timeout);
+
+        // Auto-roll for bot (immediate)
+        if (nextPlayer && (nextPlayer as any).isBot) {
+          console.log('🤖 Bot turn, auto-rolling dice...');
+          setTimeout(() => {
+            if (socket) {
+              socket.emit('roll-dice', { gameId, playerId: nextPlayer.id });
+            }
+          }, 1000); // 1 second delay before rolling
+        }
+
+        return newState;
+      });
     });
 
     // Handle turn skipped (when player has no valid moves)
     socket.on('turn-skipped', (data) => {
       console.log(`Turn skipped for player ${data.playerId}`);
+
+      // Clear any existing turn timeout
+      if (turnTimeout) {
+        clearTimeout(turnTimeout);
+        setTurnTimeout(null);
+      }
+
       setGameState((prev) => {
-        const nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
-        const nextPlayer = prev.players[nextIndex];
+        const newState = {
+          ...prev,
+          currentPlayerIndex: data.nextPlayerIndex,
+          diceValue: null,
+        };
+
+        const nextPlayer = newState.players[data.nextPlayerIndex];
+        const isMyTurn = nextPlayer?.id === userId;
+        setCanRoll(isMyTurn);
+
+        // Start 50-second timeout for next player
+        const timeout = setTimeout(() => {
+          console.log('⏰ Turn timeout - auto-rolling dice');
+          if (socket) {
+            socket.emit('roll-dice', { gameId, playerId: nextPlayer.id });
+          }
+        }, 50000);
+        setTurnTimeout(timeout);
 
         // Check if next player is bot
         if (nextPlayer && (nextPlayer as any).isBot) {
           console.log('🤖 Next player is bot, auto-rolling...');
           setTimeout(() => {
             if (socket) {
-              socket.emit('roll-dice', { gameId });
+              socket.emit('roll-dice', { gameId, playerId: nextPlayer.id });
             }
           }, 1000);
         }
 
-        return {
-          ...prev,
-          currentPlayerIndex: nextIndex,
-          diceValue: null,
-        };
+        return newState;
       });
-
-      // Update turn
-      const nextPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-      const nextPlayer = gameState.players[nextPlayerIndex];
-      setCanRoll(nextPlayer?.id === userId);
     });
 
     // Handle game end
@@ -267,6 +303,11 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
     });
 
     return () => {
+      // Clear timeout on unmount
+      if (turnTimeout) {
+        clearTimeout(turnTimeout);
+      }
+
       socket.off('game-started');
       socket.off('dice-rolled');
       socket.off('token-moved');
@@ -277,7 +318,14 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
 
   const handleRollDice = () => {
     if (!socket || !canRoll) return;
-    socket.emit('roll-dice', { gameId });
+
+    // Clear turn timeout when user manually rolls
+    if (turnTimeout) {
+      clearTimeout(turnTimeout);
+      setTurnTimeout(null);
+    }
+
+    socket.emit('roll-dice', { gameId, playerId: userId });
     setCanRoll(false);
   };
 

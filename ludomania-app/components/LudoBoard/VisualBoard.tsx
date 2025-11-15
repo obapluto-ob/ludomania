@@ -159,21 +159,46 @@ export default function VisualBoard({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-900 via-yellow-900 to-amber-950 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-900 via-yellow-900 to-amber-950 p-2 sm:p-4 md:p-6 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 mb-2 drop-shadow-lg">
+        <div className="text-center mb-4 sm:mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 mb-2 drop-shadow-lg">
             Ludomania
           </h1>
-          <p className="text-amber-200 text-lg font-semibold">
+          <p className="text-amber-200 text-sm sm:text-base md:text-lg font-semibold">
             {isMyTurn ? "🎲 Your Turn!" : `Waiting for ${currentPlayer?.username}...`}
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_auto_1fr] gap-6 items-start">
+        {/* Mobile Player List */}
+        <div className="lg:hidden mb-4 grid grid-cols-2 gap-2 sm:gap-3">
+          {gameState.players.map((player) => (
+            <div
+              key={player.id}
+              className={`p-2 sm:p-3 rounded-lg border-2 ${
+                player.id === currentPlayer?.id
+                  ? 'border-yellow-400 bg-yellow-900/30'
+                  : 'border-amber-700 bg-amber-900/20'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full`}
+                  style={{ backgroundColor: COLOR_SCHEMES[player.color].primary }}
+                />
+                <span className="text-amber-100 text-xs sm:text-sm font-semibold truncate">
+                  {player.username}
+                </span>
+                {(player as any).isBot && <span className="text-xs">🤖</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-4 sm:gap-6 items-start">
           {/* Left Players */}
-          <div className="space-y-4">
+          <div className="space-y-4 hidden lg:block">
             {gameState.players.slice(0, 2).map((player) => (
               <PlayerPanel
                 key={player.id}
@@ -186,15 +211,15 @@ export default function VisualBoard({
           </div>
 
           {/* Board */}
-          <div className="relative">
+          <div className="relative w-full max-w-2xl mx-auto lg:max-w-none">
             {/* Wooden board with texture */}
-            <div className="bg-gradient-to-br from-amber-800 via-yellow-700 to-amber-900 p-6 rounded-3xl shadow-2xl border-8 border-amber-950 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-amber-800 via-yellow-700 to-amber-900 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl shadow-2xl border-4 sm:border-6 md:border-8 border-amber-950 relative overflow-hidden">
               {/* Wood grain effect */}
               <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0id29vZCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjOEI0NTEzIi8+PHBhdGggZD0iTTAgMEwyMDAgMjAwTTIwMCAwTDAgMjAwIiBzdHJva2U9IiM2QjM0MTAiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiLz48L3N2Zz4=')]"></div>
 
               {/* Inner playing area */}
-              <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 p-4 rounded-2xl shadow-inner border-4 border-amber-700 relative">
-                <div className="grid grid-cols-15 gap-0 relative">
+              <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl shadow-inner border-2 sm:border-3 md:border-4 border-amber-700 relative">
+                <div className="grid grid-cols-15 gap-0 relative aspect-square w-full">
                   {renderBoard()}
                   {renderTokens()}
                 </div>
@@ -202,7 +227,7 @@ export default function VisualBoard({
             </div>
 
             {/* Dice Roller */}
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <DiceRoller
                 diceValue={gameState.diceValue}
                 onRoll={onRollDice}
@@ -213,7 +238,7 @@ export default function VisualBoard({
           </div>
 
           {/* Right Players */}
-          <div className="space-y-4">
+          <div className="space-y-4 hidden lg:block">
             {gameState.players.slice(2, 4).map((player) => (
               <PlayerPanel
                 key={player.id}

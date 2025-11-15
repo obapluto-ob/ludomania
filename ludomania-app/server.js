@@ -86,29 +86,65 @@ app.prepare().then(() => {
     });
 
     socket.on('roll-dice', (data) => {
-      const { gameId } = data;
+      const { gameId, playerId } = data;
+      const game = activeGames.get(gameId);
+
+      if (!game) {
+        socket.emit('error', { message: 'Game not found' });
+        return;
+      }
+
+      // Verify it's the player's turn
+      const currentPlayer = game.players[game.currentPlayerIndex || 0];
+      if (currentPlayer.id !== playerId) {
+        console.log(`❌ Not ${playerId}'s turn (current: ${currentPlayer.id})`);
+        socket.emit('error', { message: 'Not your turn' });
+        return;
+      }
+
       const diceValue = Math.floor(Math.random() * 6) + 1;
-      
-      io.to(gameId).emit('dice-rolled', { diceValue });
+      console.log(`🎲 Player ${playerId} rolled ${diceValue}`);
+
+      io.to(gameId).emit('dice-rolled', {
+        diceValue,
+        playerId,
+        currentPlayerIndex: game.currentPlayerIndex || 0
+      });
     });
 
     socket.on('move-token', (data) => {
       const { gameId, playerId, tokenId, newPosition } = data;
+      const game = activeGames.get(gameId);
+
+      if (game) {
+        // Advance to next player
+        game.currentPlayerIndex = ((game.currentPlayerIndex || 0) + 1) % game.players.length;
+        console.log(`✅ Turn advanced to player ${game.currentPlayerIndex}`);
+      }
 
       io.to(gameId).emit('token-moved', {
         playerId,
         tokenId,
         newPosition,
+        nextPlayerIndex: game?.currentPlayerIndex || 0,
       });
     });
 
     socket.on('skip-turn', (data) => {
       const { gameId, playerId } = data;
+      const game = activeGames.get(gameId);
+
       console.log(`Player ${playerId} skipping turn (no valid moves)`);
+
+      if (game) {
+        // Advance to next player
+        game.currentPlayerIndex = ((game.currentPlayerIndex || 0) + 1) % game.players.length;
+      }
 
       // Emit skip turn event to advance to next player
       io.to(gameId).emit('turn-skipped', {
         playerId,
+        nextPlayerIndex: game?.currentPlayerIndex || 0,
       });
     });
 
