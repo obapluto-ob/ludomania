@@ -101,18 +101,37 @@ export default function GamePlayPage() {
     setSocket(newSocket);
 
     // Join game room
-    if (game.player1_id === user.id && !game.player2_id) {
+    const isCreator = game.created_by === user.id;
+    const isFirstPlayer = !players || players.length === 0 || players[0].user_id === user.id;
+
+    if (isCreator && isFirstPlayer) {
       newSocket.emit('create-game', {
         gameId,
         playerId: user.id,
         username: profile?.username,
-        wagerAmount: game.wager_amount,
+        wagerAmount: game.wager || 0,
       });
     } else {
       newSocket.emit('join-game', {
         gameId,
         playerId: user.id,
         username: profile?.username,
+        isBot: false,
+      });
+    }
+
+    // If there are bot players, join them to the socket room
+    if (players) {
+      players.forEach((player) => {
+        if (player.is_bot) {
+          console.log('🤖 Joining bot player to socket room');
+          newSocket.emit('join-game', {
+            gameId,
+            playerId: player.user_id,
+            username: 'Bot',
+            isBot: true,
+          });
+        }
       });
     }
 

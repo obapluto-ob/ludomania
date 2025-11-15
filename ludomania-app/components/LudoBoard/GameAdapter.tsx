@@ -225,6 +225,36 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
       }
     });
 
+    // Handle turn skipped (when player has no valid moves)
+    socket.on('turn-skipped', (data) => {
+      console.log(`Turn skipped for player ${data.playerId}`);
+      setGameState((prev) => {
+        const nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
+        const nextPlayer = prev.players[nextIndex];
+
+        // Check if next player is bot
+        if (nextPlayer && (nextPlayer as any).isBot) {
+          console.log('🤖 Next player is bot, auto-rolling...');
+          setTimeout(() => {
+            if (socket) {
+              socket.emit('roll-dice', { gameId });
+            }
+          }, 1000);
+        }
+
+        return {
+          ...prev,
+          currentPlayerIndex: nextIndex,
+          diceValue: null,
+        };
+      });
+
+      // Update turn
+      const nextPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+      const nextPlayer = gameState.players[nextPlayerIndex];
+      setCanRoll(nextPlayer?.id === userId);
+    });
+
     // Handle game end
     socket.on('game-ended', (data) => {
       setGameState((prev) => ({
@@ -238,6 +268,7 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
       socket.off('game-started');
       socket.off('dice-rolled');
       socket.off('token-moved');
+      socket.off('turn-skipped');
       socket.off('game-ended');
     };
   }, [socket, userId]);

@@ -58,7 +58,7 @@ app.prepare().then(() => {
     });
 
     socket.on('join-game', async (data) => {
-      const { gameId, playerId, username } = data;
+      const { gameId, playerId, username, isBot } = data;
       const game = activeGames.get(gameId);
 
       if (!game) {
@@ -66,20 +66,23 @@ app.prepare().then(() => {
         return;
       }
 
-      if (game.players.length >= 2) {
+      if (game.players.length >= 4) {
         socket.emit('error', { message: 'Game is full' });
         return;
       }
 
-      game.players.push({ id: playerId, username, socketId: socket.id });
+      game.players.push({ id: playerId, username, socketId: socket.id, isBot: isBot || false });
       socket.join(gameId);
 
-      // Start game when 2 players joined
-      if (game.players.length === 2) {
-        io.to(gameId).emit('game-started', {
-          players: game.players,
-        });
-      }
+      console.log(`Player joined: ${username} (Bot: ${isBot || false})`);
+
+      // Emit player joined event to all players in the room
+      io.to(gameId).emit('player-joined', {
+        playerId,
+        username,
+        isBot: isBot || false,
+        playerCount: game.players.length,
+      });
     });
 
     socket.on('roll-dice', (data) => {
@@ -91,11 +94,21 @@ app.prepare().then(() => {
 
     socket.on('move-token', (data) => {
       const { gameId, playerId, tokenId, newPosition } = data;
-      
+
       io.to(gameId).emit('token-moved', {
         playerId,
         tokenId,
         newPosition,
+      });
+    });
+
+    socket.on('skip-turn', (data) => {
+      const { gameId, playerId } = data;
+      console.log(`Player ${playerId} skipping turn (no valid moves)`);
+
+      // Emit skip turn event to advance to next player
+      io.to(gameId).emit('turn-skipped', {
+        playerId,
       });
     });
 
