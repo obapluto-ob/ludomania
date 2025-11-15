@@ -90,14 +90,23 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   // Check if game has bot players
   const hasBot = gameState.players.some((p: any) => p.isBot);
 
-  // Create voice room when component mounts (only for real multiplayer)
+  // Create voice room when game starts (only for real multiplayer)
   useEffect(() => {
-    if (!hasBot && gameState.players.length > 0) {
+    // Only create voice room when:
+    // 1. Game status is 'playing' (game has started)
+    // 2. We have at least 2 players
+    // 3. No bots in the game
+    // 4. Voice room not already created
+    if (gameState.status === 'playing' &&
+        gameState.players.length >= 2 &&
+        !hasBot &&
+        !voiceRoomUrl) {
+      console.log('🎤 Creating voice room for multiplayer game...');
       createVoiceRoom();
     } else if (hasBot) {
       console.log('🤖 Bot game detected - voice chat disabled');
     }
-  }, [gameState.players.length]);
+  }, [gameState.status, gameState.players.length, hasBot]);
 
   const createVoiceRoom = async () => {
     try {

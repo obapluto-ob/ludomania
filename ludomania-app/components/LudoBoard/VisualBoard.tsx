@@ -151,14 +151,14 @@ export default function VisualBoard({
           }
         }
 
-        // Add home zone background color if in home area
+        // Add VIBRANT home zone background color if in home area
         let bgClass = '';
         if (homeZoneBg && cellType === 'empty') {
           const bgColors: Record<string, string> = {
-            red: 'bg-red-200/40',
-            blue: 'bg-blue-200/40',
-            green: 'bg-green-200/40',
-            yellow: 'bg-yellow-200/40',
+            red: 'bg-red-400/60',      // Bright red - like classic Ludo!
+            blue: 'bg-blue-400/60',    // Bright blue - like classic Ludo!
+            green: 'bg-green-400/60',  // Bright green - like classic Ludo!
+            yellow: 'bg-yellow-300/60', // Bright yellow - like classic Ludo!
           };
           bgClass = bgColors[homeZoneBg] || '';
         }

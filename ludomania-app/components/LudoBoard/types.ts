@@ -47,39 +47,43 @@ export const START_POSITIONS: Record<PlayerColor, number> = {
   yellow: 39,
 };
 
-// Color schemes for each player - Rich, vibrant colors for wooden board
+// Color schemes for each player - VIBRANT CLASSIC LUDO COLORS! 🎨
 export const COLOR_SCHEMES = {
   red: {
-    primary: '#DC2626',
+    primary: '#EF4444',      // Bright, bold red like classic Ludo
     light: '#FCA5A5',
-    dark: '#7F1D1D',
-    gradient: 'from-red-600 via-red-700 to-red-900',
-    glow: 'shadow-red-600/60',
-    accent: '#FBBF24', // Gold accent
+    dark: '#DC2626',
+    gradient: 'from-red-500 via-red-400 to-red-500',  // Vibrant gradient
+    glow: 'shadow-red-400/70',
+    accent: '#FBBF24',
+    bg: 'bg-red-500',        // Solid vibrant background
   },
   blue: {
-    primary: '#2563EB',
+    primary: '#3B82F6',      // Bright, bold blue like classic Ludo
     light: '#93C5FD',
-    dark: '#1E3A8A',
-    gradient: 'from-blue-600 via-blue-700 to-blue-900',
-    glow: 'shadow-blue-600/60',
-    accent: '#D1D5DB', // Silver accent
+    dark: '#2563EB',
+    gradient: 'from-blue-500 via-blue-400 to-blue-500',  // Vibrant gradient
+    glow: 'shadow-blue-400/70',
+    accent: '#D1D5DB',
+    bg: 'bg-blue-500',       // Solid vibrant background
   },
   green: {
-    primary: '#059669',
-    light: '#6EE7B7',
-    dark: '#064E3B',
-    gradient: 'from-green-600 via-green-700 to-green-900',
-    glow: 'shadow-green-600/60',
-    accent: '#FBBF24', // Gold accent
+    primary: '#22C55E',      // Bright, bold green like classic Ludo
+    light: '#86EFAC',
+    dark: '#16A34A',
+    gradient: 'from-green-500 via-green-400 to-green-500',  // Vibrant gradient
+    glow: 'shadow-green-400/70',
+    accent: '#FBBF24',
+    bg: 'bg-green-500',      // Solid vibrant background
   },
   yellow: {
-    primary: '#EAB308',
+    primary: '#FACC15',      // Bright, bold yellow like classic Ludo
     light: '#FDE047',
-    dark: '#713F12',
-    gradient: 'from-yellow-500 via-yellow-600 to-yellow-800',
-    glow: 'shadow-yellow-600/60',
-    accent: '#CD7F32', // Bronze accent
+    dark: '#EAB308',
+    gradient: 'from-yellow-400 via-yellow-300 to-yellow-400',  // Vibrant gradient
+    glow: 'shadow-yellow-400/70',
+    accent: '#CD7F32',
+    bg: 'bg-yellow-400',     // Solid vibrant background
   },
 };
 

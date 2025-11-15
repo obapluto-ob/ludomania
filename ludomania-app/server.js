@@ -71,10 +71,19 @@ app.prepare().then(() => {
         return;
       }
 
+      // Check if player already joined (prevent duplicates)
+      const existingPlayer = game.players.find(p => p.id === playerId);
+      if (existingPlayer) {
+        console.log(`Player ${username} already in game, updating socket`);
+        existingPlayer.socketId = socket.id;
+        socket.join(gameId);
+        return;
+      }
+
       game.players.push({ id: playerId, username, socketId: socket.id, isBot: isBot || false });
       socket.join(gameId);
 
-      console.log(`Player joined: ${username} (Bot: ${isBot || false})`);
+      console.log(`✅ Player joined: ${username} (Bot: ${isBot || false}) - Total players: ${game.players.length}`);
 
       // Emit player joined event to all players in the room
       io.to(gameId).emit('player-joined', {
@@ -83,6 +92,23 @@ app.prepare().then(() => {
         isBot: isBot || false,
         playerCount: game.players.length,
       });
+
+      // Auto-start game when we have at least 2 players
+      if (game.players.length >= 2 && !game.started) {
+        game.started = true;
+        game.currentPlayerIndex = 0;
+
+        console.log(`🎮 Starting game with ${game.players.length} players`);
+
+        // Emit game-started event with all player info
+        io.to(gameId).emit('game-started', {
+          players: game.players.map(p => ({
+            id: p.id,
+            username: p.username,
+            isBot: p.isBot
+          }))
+        });
+      }
     });
 
     socket.on('roll-dice', (data) => {
