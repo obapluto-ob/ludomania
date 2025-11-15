@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { io, Socket } from 'socket.io-client';
-import LudoBoard from '@/components/LudoBoard';
+import GameAdapter from '@/components/LudoBoard/GameAdapter';
 
 interface GameInfo {
   id: string;
@@ -155,9 +155,7 @@ export default function GamePlayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <LudoBoard socket={socket} gameId={gameId} userId={userId} username={username} gameInfo={gameInfo} />
-    </div>
+    <GameAdapter socket={socket} gameId={gameId} userId={userId} username={username} gameInfo={gameInfo} />
   );
 }
 

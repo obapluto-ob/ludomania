@@ -1,0 +1,216 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Socket } from 'socket.io-client';
+import { useRouter } from 'next/navigation';
+import VisualBoard from './VisualBoard';
+import { GameState, Player, Token, PlayerColor } from './types';
+
+interface GameAdapterProps {
+  socket: Socket | null;
+  gameId: string;
+  userId: string;
+  username: string;
+  gameInfo: any;
+}
+
+/**
+ * Adapter component that bridges the old LudoBoard interface with the new VisualBoard
+ * Handles socket communication and game state management
+ */
+export default function GameAdapter({ socket, gameId, userId, username, gameInfo }: GameAdapterProps) {
+  const router = useRouter();
+  const [gameState, setGameState] = useState<GameState>({
+    gameId,
+    players: [],
+    currentPlayerIndex: 0,
+    diceValue: null,
+    winner: null,
+    status: 'waiting',
+  });
+  const [canRoll, setCanRoll] = useState(false);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Initialize players when game starts
+    socket.on('game-started', (data) => {
+      const players: Player[] = data.players.map((p: any, index: number) => {
+        const colors: PlayerColor[] = ['red', 'blue', 'green', 'yellow'];
+        const color = colors[index];
+        
+        return {
+          id: p.id,
+          username: p.username,
+          color,
+          tokens: Array.from({ length: 4 }, (_, i) => ({
+            id: i,
+            position: -1,
+            color,
+            playerId: p.id,
+            isHome: true,
+            isFinished: false,
+          })),
+          position: index + 1,
+          isReady: true,
+        };
+      });
+
+      setGameState((prev) => ({
+        ...prev,
+        players,
+        status: 'playing',
+        currentPlayerIndex: 0,
+      }));
+
+      // Set first player's turn
+      if (players[0].id === userId) {
+        setCanRoll(true);
+      }
+    });
+
+    // Handle dice roll
+    socket.on('dice-rolled', (data) => {
+      setGameState((prev) => ({
+        ...prev,
+        diceValue: data.diceValue,
+      }));
+    });
+
+    // Handle token movement
+    socket.on('token-moved', (data) => {
+      setGameState((prev) => {
+        const updatedPlayers = prev.players.map((player) => {
+          if (player.id === data.playerId) {
+            return {
+              ...player,
+              tokens: player.tokens.map((token) => {
+                if (token.id === data.tokenId) {
+                  return {
+                    ...token,
+                    position: data.newPosition,
+                    isHome: data.newPosition === -1,
+                    isFinished: data.newPosition >= 57,
+                  };
+                }
+                return token;
+              }),
+            };
+          }
+          return player;
+        });
+
+        // Find next player index
+        const currentIndex = prev.players.findIndex((p) => p.id === data.playerId);
+        const nextIndex = (currentIndex + 1) % prev.players.length;
+
+        return {
+          ...prev,
+          players: updatedPlayers,
+          currentPlayerIndex: nextIndex,
+          diceValue: null,
+        };
+      });
+
+      // Update turn
+      const isMyTurn = gameState.players[(gameState.currentPlayerIndex + 1) % gameState.players.length]?.id === userId;
+      setCanRoll(isMyTurn);
+    });
+
+    // Handle game end
+    socket.on('game-ended', (data) => {
+      setGameState((prev) => ({
+        ...prev,
+        status: 'completed',
+        winner: data.winnerId,
+      }));
+    });
+
+    return () => {
+      socket.off('game-started');
+      socket.off('dice-rolled');
+      socket.off('token-moved');
+      socket.off('game-ended');
+    };
+  }, [socket, userId]);
+
+  const handleRollDice = () => {
+    if (!socket || !canRoll) return;
+    socket.emit('roll-dice', { gameId });
+    setCanRoll(false);
+  };
+
+  const handleMoveToken = (tokenId: number) => {
+    if (!socket || !gameState.diceValue) return;
+
+    const myPlayer = gameState.players.find((p) => p.id === userId);
+    if (!myPlayer) return;
+
+    const token = myPlayer.tokens[tokenId];
+    let newPosition = token.position;
+
+    // Need 6 to leave home
+    if (token.position === -1 && gameState.diceValue === 6) {
+      newPosition = 0; // Start position
+    } else if (token.position >= 0) {
+      newPosition = token.position + gameState.diceValue;
+    } else {
+      return; // Can't move
+    }
+
+    // Emit move to server
+    socket.emit('move-token', {
+      gameId,
+      playerId: userId,
+      tokenId,
+      newPosition,
+    });
+
+    // Check if won (all tokens finished)
+    const updatedTokens = myPlayer.tokens.map((t) =>
+      t.id === tokenId ? { ...t, position: newPosition } : t
+    );
+    const allFinished = updatedTokens.every((t) => t.position >= 57);
+
+    if (allFinished) {
+      socket.emit('game-won', { gameId, winnerId: userId });
+    }
+  };
+
+  // Game ended screen
+  if (gameState.status === 'completed') {
+    const isWinner = gameState.winner === userId;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="bg-slate-800 rounded-2xl shadow-2xl p-12 max-w-md text-center border-4 border-yellow-500">
+          <div className="text-8xl mb-6">{isWinner ? '🏆' : '😢'}</div>
+          <h2 className="text-4xl font-bold mb-4 text-white">
+            {isWinner ? 'Victory!' : 'Defeat'}
+          </h2>
+          <p className="text-2xl mb-8 text-gray-300">
+            {isWinner
+              ? `You won KSh ${(gameInfo.wager_amount * 2 * 0.98).toFixed(2)}!`
+              : `Better luck next time!`}
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:scale-105 transform transition-all shadow-lg"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <VisualBoard
+      gameState={gameState}
+      currentUserId={userId}
+      onRollDice={handleRollDice}
+      onMoveToken={handleMoveToken}
+      canRoll={canRoll}
+    />
+  );
+}
+
