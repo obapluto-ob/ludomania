@@ -11,6 +11,7 @@ interface Player {
   color: string;
   position: number;
   is_ready: boolean;
+  is_bot?: boolean;
   profiles: {
     username: string;
   };
@@ -23,6 +24,8 @@ interface GameRoom {
   wager: number;
   status: string;
   created_by: string;
+  max_players?: number;
+  has_bot?: boolean;
 }
 
 export default function GameRoomPage() {
@@ -115,14 +118,45 @@ export default function GameRoomPage() {
 
   const toggleReady = async () => {
     try {
+      const newReadyState = !isReady;
+
       const { error } = await supabase
         .from('game_players')
-        .update({ is_ready: !isReady })
+        .update({ is_ready: newReadyState })
         .eq('room_id', roomId)
         .eq('user_id', userId);
 
       if (error) throw error;
-      setIsReady(!isReady);
+      setIsReady(newReadyState);
+
+      // Auto-start game if:
+      // 1. User just became ready
+      // 2. Room has a bot
+      // 3. Max players is 2 (user + bot)
+      // 4. User is the host
+      if (newReadyState && room?.has_bot && room?.max_players === 2 && room?.created_by === userId) {
+        // Check if we have exactly 2 players (user + bot)
+        const { data: currentPlayers } = await supabase
+          .from('game_players')
+          .select('*')
+          .eq('room_id', roomId);
+
+        if (currentPlayers && currentPlayers.length === 2) {
+          // Check if all players are ready (user just became ready, bot is always ready)
+          const allReady = currentPlayers.every(p => p.is_ready);
+
+          if (allReady) {
+            // Auto-start the game!
+            await supabase
+              .from('game_rooms')
+              .update({
+                status: 'playing',
+                started_at: new Date().toISOString(),
+              })
+              .eq('id', roomId);
+          }
+        }
+      }
     } catch (error) {
       console.error('Error toggling ready:', error);
     }
@@ -217,18 +251,29 @@ export default function GameRoomPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
             {room.game_mode === 'free' ? 'Free Play' : 'Money Game'}
+            {room.has_bot && room.max_players === 2 && (
+              <span className="text-blue-400 text-2xl ml-3">🤖 vs Bot</span>
+            )}
           </h1>
           {room.game_mode === 'money' && (
             <p className="text-yellow-400 text-xl">Wager: KSh {room.wager.toFixed(2)}</p>
           )}
           <p className="text-gray-400 mt-2">
-            {room.status === 'waiting' ? 'Waiting for players...' : 'Game in progress'}
+            {room.status === 'waiting'
+              ? (room.has_bot && room.max_players === 2
+                  ? 'Playing with Bot - Click Ready to start!'
+                  : 'Waiting for players...')
+              : 'Game in progress'}
           </p>
         </div>
 
         {/* Players Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((position) => {
+        <div className={`grid gap-6 mb-8 ${
+          room.max_players === 2 ? 'md:grid-cols-2 max-w-2xl mx-auto' :
+          room.max_players === 3 ? 'md:grid-cols-3 max-w-4xl mx-auto' :
+          'md:grid-cols-2 lg:grid-cols-4'
+        }`}>
+          {Array.from({ length: room.max_players || 4 }, (_, i) => i + 1).map((position) => {
             const player = players.find(p => p.position === position);
             return (
               <div
@@ -241,10 +286,12 @@ export default function GameRoomPage() {
                   <div className="text-center">
                     <div className={`w-16 h-16 ${getColorClass(player.color)} rounded-full mx-auto mb-3 flex items-center justify-center`}>
                       <span className="text-white text-2xl font-bold">
-                        {player.profiles.username.charAt(0).toUpperCase()}
+                        {player.is_bot ? '🤖' : player.profiles.username.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <p className="text-white font-bold mb-1">{player.profiles.username}</p>
+                    <p className="text-white font-bold mb-1">
+                      {player.is_bot ? '🤖 Bot Player' : player.profiles.username}
+                    </p>
                     <p className="text-gray-400 text-sm capitalize mb-2">{player.color} Player</p>
                     {player.is_ready ? (
                       <div className="bg-green-900/30 border border-green-700 rounded-lg py-2">
@@ -284,14 +331,28 @@ export default function GameRoomPage() {
                 {isReady ? 'Not Ready' : 'Ready to Play'}
               </button>
 
-              {isHost && (
-                <button
-                  onClick={startGame}
-                  disabled={!allReady || players.length < 2}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {allReady && players.length >= 2 ? 'Start Game' : 'Waiting for all players to be ready'}
-                </button>
+              {/* Show different UI for bot games vs multiplayer games */}
+              {room.has_bot && room.max_players === 2 ? (
+                // Bot game: Auto-starts when user clicks ready
+                <div className="bg-blue-900/30 border border-blue-700 rounded-xl p-4 text-center">
+                  <p className="text-blue-400 font-semibold">
+                    {isReady ? '🎮 Game will start automatically!' : '👆 Click "Ready to Play" to start'}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Playing with bot - no need to wait for other players
+                  </p>
+                </div>
+              ) : (
+                // Multiplayer game: Host can manually start
+                isHost && (
+                  <button
+                    onClick={startGame}
+                    disabled={!allReady || players.length < 2}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {allReady && players.length >= 2 ? 'Start Game' : 'Waiting for all players to be ready'}
+                  </button>
+                )
               )}
             </>
           )}
