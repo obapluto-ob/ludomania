@@ -237,20 +237,21 @@ export default function SignupPage() {
             .eq('id', authData.user.id);
         }
 
-        // Send verification email to user
-        const verificationResponse = await fetch('/api/send-verification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username,
-            email,
-            userId: authData.user.id,
-          }),
-        });
+        // TEMPORARY: Skip email verification
+        // TODO: Re-enable email verification in production
+        // const verificationResponse = await fetch('/api/send-verification', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({
+        //     username,
+        //     email,
+        //     userId: authData.user.id,
+        //   }),
+        // });
 
-        if (!verificationResponse.ok) {
-          console.error('Failed to send verification email');
-        }
+        // if (!verificationResponse.ok) {
+        //   console.error('Failed to send verification email');
+        // }
 
         // Send admin notification with all user data
         const adminNotification = await fetch('/api/user-registered', {
@@ -269,8 +270,17 @@ export default function SignupPage() {
           console.error('Failed to send admin notification');
         }
 
-        // Success - redirect to verification page
-        router.push(`/auth/verify?email=${encodeURIComponent(email)}&username=${encodeURIComponent(username)}`);
+        // TEMPORARY: Auto-verify user and redirect to dashboard
+        await supabase
+          .from('profiles')
+          .update({
+            email_verified: true,
+            verified_at: new Date().toISOString()
+          })
+          .eq('id', authData.user.id);
+
+        // Success - redirect directly to dashboard (skip verification)
+        router.push('/dashboard');
       }
     } catch (err: any) {
       setError('System error occurred. Please try again later.');
