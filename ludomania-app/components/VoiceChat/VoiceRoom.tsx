@@ -12,6 +12,7 @@ export default function VoiceRoom({
   onJoined,
   onLeft,
   onError,
+  onCallObjectReady,
 }: VoiceRoomProps) {
   const [callObject, setCallObject] = useState<DailyCall | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
@@ -36,6 +37,9 @@ export default function VoiceRoom({
 
     callObjectRef.current = daily;
     setCallObject(daily);
+
+    // Notify parent component that call object is ready
+    onCallObjectReady?.(daily);
 
     // Join the room
     joinRoom(daily);

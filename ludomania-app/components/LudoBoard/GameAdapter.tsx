@@ -5,8 +5,9 @@ import { Socket } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import VisualBoard from './VisualBoard';
 import { GameState, Player, Token, PlayerColor } from './types';
-import { VoiceRoom } from '../VoiceChat';
+import { VoiceRoom, MicControls } from '../VoiceChat';
 import { LudoBotAI } from '@/lib/bot-ai';
+import { DailyCall } from '@daily-co/daily-js';
 
 interface GameAdapterProps {
   socket: Socket | null;
@@ -34,6 +35,7 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   const [voiceRoomUrl, setVoiceRoomUrl] = useState<string | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [playerProgress, setPlayerProgress] = useState<Record<string, number>>({});
+  const [callObject, setCallObject] = useState<DailyCall | null>(null);
 
   // Calculate player progress (0-100%)
   const calculatePlayerProgress = (player: Player): number => {
@@ -395,11 +397,21 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
 
       {/* Voice Chat */}
       {voiceEnabled && voiceRoomUrl && (
-        <VoiceRoom
-          roomUrl={voiceRoomUrl}
-          username={username}
-          onError={(error) => console.error('Voice chat error:', error)}
-        />
+        <div className="fixed bottom-4 right-4 z-50">
+          <VoiceRoom
+            roomUrl={voiceRoomUrl}
+            username={username}
+            onError={(error) => console.error('Voice chat error:', error)}
+            onCallObjectReady={(call) => setCallObject(call)}
+          />
+
+          {/* Mic Controls */}
+          {callObject && (
+            <div className="mt-3">
+              <MicControls callObject={callObject} />
+            </div>
+          )}
+        </div>
       )}
     </>
   );

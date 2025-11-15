@@ -1,4 +1,5 @@
 // Voice Chat Types
+import { DailyCall } from '@daily-co/daily-js';
 
 export interface Participant {
   user_id: string;
@@ -14,6 +15,7 @@ export interface VoiceRoomProps {
   onJoined?: () => void;
   onLeft?: () => void;
   onError?: (error: string) => void;
+  onCallObjectReady?: (callObject: DailyCall) => void;
 }
 
 export interface MicButtonProps {
