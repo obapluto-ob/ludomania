@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('username, wallet_balance')
+      .select('username, wallet_balance, locked_balance')
       .eq('id', userId)
       .single();
 
@@ -27,10 +27,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has sufficient balance
+    // Calculate withdrawal fee (5%)
+    const withdrawalFee = parseFloat((amount * 0.05).toFixed(2));
+    const totalDeduction = amount; // User requests amount, we deduct fee from it
+    const netAmount = amount - withdrawalFee; // Amount user actually receives
+
+    // Check if user has sufficient balance (including locked balance check)
     if (profile.wallet_balance < amount) {
       return NextResponse.json(
-        { error: 'Insufficient balance' },
+        { error: `Insufficient balance. You have KSh ${profile.wallet_balance.toFixed(2)} available (KSh ${profile.locked_balance.toFixed(2)} locked in active games)` },
+        { status: 400 }
+      );
+    }
+
+    // Minimum withdrawal check (to make fees worthwhile)
+    if (amount < 50) {
+      return NextResponse.json(
+        { error: 'Minimum withdrawal amount is KSh 50' },
         { status: 400 }
       );
     }
@@ -41,9 +54,10 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         type: 'withdrawal',
-        amount,
+        amount: netAmount, // Amount user receives
         status: 'pending',
         notes: bankDetails,
+        fee_amount: withdrawalFee,
       })
       .select()
       .single();
@@ -56,9 +70,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Deduct from wallet (will be refunded if rejected)
+    const newBalance = profile.wallet_balance - amount;
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ wallet_balance: profile.wallet_balance - amount })
+      .update({
+        wallet_balance: newBalance,
+        total_fees_paid: (profile.total_fees_paid || 0) + withdrawalFee,
+      })
       .eq('id', userId);
 
     if (updateError) {
@@ -68,13 +86,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Record platform revenue
+    await supabase.from('platform_revenue').insert({
+      revenue_type: 'withdrawal_fee',
+      amount: withdrawalFee,
+      user_id: userId,
+      transaction_id: transaction.id,
+      description: `Withdrawal fee (5% of KSh ${amount})`,
+    });
+
     // Send email notification to admin
-    await sendWithdrawalNotification(profile.username, amount, bankDetails, userId);
+    await sendWithdrawalNotification(
+      profile.username,
+      netAmount,
+      `${bankDetails}\n\nWithdrawal Fee: KSh ${withdrawalFee}\nNet Amount: KSh ${netAmount}`,
+      userId
+    );
 
     return NextResponse.json({
       success: true,
       transaction,
-      message: 'Withdrawal request submitted. You will be notified once processed.',
+      requestedAmount: amount,
+      withdrawalFee: withdrawalFee,
+      netAmount: netAmount,
+      newBalance: newBalance,
+      message: `Withdrawal request submitted. You will receive KSh ${netAmount.toFixed(2)} (KSh ${withdrawalFee.toFixed(2)} fee deducted). You will be notified once processed.`,
     });
   } catch (error) {
     console.error('Withdrawal error:', error);
