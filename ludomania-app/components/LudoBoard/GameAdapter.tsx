@@ -5,6 +5,7 @@ import { Socket } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import VisualBoard from './VisualBoard';
 import { GameState, Player, Token, PlayerColor } from './types';
+import { VoiceRoom } from '../VoiceChat';
 
 interface GameAdapterProps {
   socket: Socket | null;
@@ -29,6 +30,33 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
     status: 'waiting',
   });
   const [canRoll, setCanRoll] = useState(false);
+  const [voiceRoomUrl, setVoiceRoomUrl] = useState<string | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+
+  // Create voice room when component mounts
+  useEffect(() => {
+    createVoiceRoom();
+  }, []);
+
+  const createVoiceRoom = async () => {
+    try {
+      const response = await fetch('/api/voice/create-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setVoiceRoomUrl(data.roomUrl);
+        setVoiceEnabled(true);
+      } else {
+        console.error('Failed to create voice room');
+      }
+    } catch (error) {
+      console.error('Error creating voice room:', error);
+    }
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -204,13 +232,24 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   }
 
   return (
-    <VisualBoard
-      gameState={gameState}
-      currentUserId={userId}
-      onRollDice={handleRollDice}
-      onMoveToken={handleMoveToken}
-      canRoll={canRoll}
-    />
+    <>
+      <VisualBoard
+        gameState={gameState}
+        currentUserId={userId}
+        onRollDice={handleRollDice}
+        onMoveToken={handleMoveToken}
+        canRoll={canRoll}
+      />
+
+      {/* Voice Chat */}
+      {voiceEnabled && voiceRoomUrl && (
+        <VoiceRoom
+          roomUrl={voiceRoomUrl}
+          username={username}
+          onError={(error) => console.error('Voice chat error:', error)}
+        />
+      )}
+    </>
   );
 }
 
