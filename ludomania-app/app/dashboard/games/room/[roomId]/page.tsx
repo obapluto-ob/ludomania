@@ -95,28 +95,39 @@ export default function GameRoomPage() {
       if (roomError) throw roomError;
       setRoom(roomData);
 
-      // Fetch players
+      // Fetch players WITHOUT profile join (we'll handle it separately)
       const { data: playersData, error: playersError } = await supabase
         .from('game_players')
-        .select(`
-          *,
-          profiles:user_id (username)
-        `)
+        .select('*')
         .eq('room_id', roomId)
         .order('position');
 
       if (playersError) throw playersError;
 
-      // Handle bot players - add fake profile
-      const processedPlayers = (playersData || []).map(player => {
-        if (player.is_bot) {
-          return {
-            ...player,
-            profiles: { username: 'Bot' }
-          };
-        }
-        return player;
-      });
+      // Process players and fetch profiles only for real users
+      const processedPlayers = await Promise.all(
+        (playersData || []).map(async (player) => {
+          if (player.is_bot) {
+            // Bot player - use fake profile
+            return {
+              ...player,
+              profiles: { username: 'Bot' }
+            };
+          } else {
+            // Real player - fetch profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', player.user_id)
+              .single();
+
+            return {
+              ...player,
+              profiles: profile || { username: 'Player' }
+            };
+          }
+        })
+      );
 
       setPlayers(processedPlayers);
 
