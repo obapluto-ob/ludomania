@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlayerColor, Player, GameState, PATH_COORDINATES, HOME_ZONES, COLOR_SCHEMES, BOARD_CONFIG } from './types';
 import BoardSquare from './BoardSquare';
 import TokenPiece from './TokenPiece';
@@ -133,7 +133,7 @@ export default function VisualBoard({
 
   // Render all tokens on the board
   const renderTokens = () => {
-    const tokens: JSX.Element[] = [];
+    const tokens: React.ReactElement[] = [];
 
     gameState.players.forEach((player) => {
       player.tokens.forEach((token, index) => {
