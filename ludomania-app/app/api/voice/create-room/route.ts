@@ -27,38 +27,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a Daily.co room
-    const response = await fetch('https://api.daily.co/v1/rooms', {
-      method: 'POST',
+    const roomName = `ludomania-${gameId}`;
+
+    // First, try to get existing room
+    const getResponse = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        name: `ludomania-${gameId}`,
-        privacy: 'private',
-        properties: {
-          enable_chat: false,
-          enable_screenshare: false,
-          enable_recording: false,
-          start_video_off: true,
-          start_audio_off: true,
-          max_participants: 4, // Max 4 players in Ludo
-          exp: Math.floor(Date.now() / 1000) + 3600, // Expire in 1 hour
-        },
-      }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Daily.co API error:', errorData);
-      return NextResponse.json(
-        { error: 'Failed to create voice room' },
-        { status: 500 }
-      );
-    }
+    let roomData;
 
-    const roomData = await response.json();
+    if (getResponse.ok) {
+      // Room already exists, use it
+      roomData = await getResponse.json();
+      console.log('✅ Using existing Daily.co room:', roomName);
+    } else {
+      // Room doesn't exist, create it
+      const response = await fetch('https://api.daily.co/v1/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          name: roomName,
+          privacy: 'private',
+          properties: {
+            enable_chat: false,
+            enable_screenshare: false,
+            enable_recording: false,
+            start_video_off: true,
+            start_audio_off: true,
+            max_participants: 4, // Max 4 players in Ludo
+            exp: Math.floor(Date.now() / 1000) + 3600, // Expire in 1 hour
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Daily.co API error:', errorData);
+        return NextResponse.json(
+          { error: 'Failed to create voice room' },
+          { status: 500 }
+        );
+      }
+
+      roomData = await response.json();
+      console.log('✅ Created new Daily.co room:', roomName);
+    }
 
     return NextResponse.json({
       roomUrl: roomData.url,

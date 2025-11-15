@@ -19,14 +19,22 @@ export default function VoiceRoom({
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [activeSpeaker, setActiveSpeaker] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const callObjectRef = useRef<DailyCall | null>(null);
 
   useEffect(() => {
+    // Prevent duplicate instances
+    if (callObjectRef.current) {
+      console.log('⚠️ Daily call object already exists, skipping creation');
+      return;
+    }
+
     // Create Daily call object
     const daily = DailyIframe.createCallObject({
       audioSource: true,
       videoSource: false, // Audio only
     });
 
+    callObjectRef.current = daily;
     setCallObject(daily);
 
     // Join the room
@@ -34,9 +42,13 @@ export default function VoiceRoom({
 
     // Cleanup on unmount
     return () => {
-      if (daily) {
-        daily.leave().then(() => {
-          daily.destroy();
+      if (callObjectRef.current) {
+        callObjectRef.current.leave().then(() => {
+          callObjectRef.current?.destroy();
+          callObjectRef.current = null;
+        }).catch((err) => {
+          console.error('Error cleaning up Daily call:', err);
+          callObjectRef.current = null;
         });
       }
     };
