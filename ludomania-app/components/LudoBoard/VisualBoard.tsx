@@ -258,14 +258,21 @@ export default function VisualBoard({
 
           {/* Board */}
           <div className="relative w-full max-w-2xl mx-auto lg:max-w-none">
-            {/* Wooden board with texture */}
-            <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950 p-4 sm:p-6 md:p-8 rounded-3xl shadow-2xl border-8 border-amber-950 relative overflow-hidden">
-              {/* Wood grain effect */}
-              <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0id29vZCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjOEI0NTEzIi8+PHBhdGggZD0iTTAgMEwyMDAgMjAwTTIwMCAwTDAgMjAwIiBzdHJva2U9IiM2QjM0MTAiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiLz48L3N2Zz4=')]"></div>
+            {/* PROFESSIONAL WOODEN BOARD - Like Ludo King! */}
+            <div className="bg-gradient-to-br from-amber-900 via-amber-800 to-amber-950 p-6 sm:p-8 md:p-10 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] border-[12px] border-amber-950 relative overflow-hidden">
+              {/* Wood grain texture overlay */}
+              <div className="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0id29vZCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjOEI0NTEzIi8+PHBhdGggZD0iTTAgMEwyMDAgMjAwTTIwMCAwTDAgMjAwIiBzdHJva2U9IiM2QjM0MTAiIHN0cm9rZS13aWR0aD0iMC41IiBvcGFjaXR5PSIwLjMiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjd29vZCkiLz48L3N2Zz4=')]"></div>
 
-              {/* Inner playing area - Classic Ludo board background */}
-              <div className="bg-gradient-to-br from-amber-100 via-yellow-50 to-amber-100 p-1 rounded-2xl shadow-inner border-4 border-amber-800 relative">
-                <div className="grid grid-cols-15 gap-[1px] relative aspect-square w-full bg-gray-400">
+              {/* Glossy highlight on top edge */}
+              <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-white/10 to-transparent rounded-t-3xl"></div>
+
+              {/* Inner playing area - RAISED 3D EFFECT */}
+              <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 p-2 rounded-2xl shadow-[inset_0_4px_12px_rgba(0,0,0,0.3),0_8px_24px_rgba(0,0,0,0.2)] border-[6px] border-amber-900 relative">
+                {/* Inner glow */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 via-transparent to-black/10 pointer-events-none"></div>
+
+                {/* Board grid */}
+                <div className="grid grid-cols-15 gap-[2px] relative aspect-square w-full bg-gray-800 rounded-lg overflow-hidden shadow-lg">
                   {renderBoard()}
                   {renderTokens()}
                 </div>
