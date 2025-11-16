@@ -130,14 +130,23 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
   };
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.log('⚠️ Socket not connected yet');
+      return;
+    }
+
+    console.log('🔌 Setting up socket listeners for game:', gameId);
 
     // Initialize players when game starts
     socket.on('game-started', (data) => {
+      console.log('🎮 GAME STARTED EVENT RECEIVED!', data);
+
       const players: Player[] = data.players.map((p: any, index: number) => {
         const colors: PlayerColor[] = ['red', 'blue', 'green', 'yellow'];
         const color = colors[index];
-        
+
+        console.log(`👤 Creating player ${index + 1}: ${p.username} (${color})`);
+
         return {
           id: p.id,
           username: p.username,
@@ -155,6 +164,8 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
         };
       });
 
+      console.log('✅ Players initialized:', players.map(p => p.username));
+
       setGameState((prev) => ({
         ...prev,
         players,
@@ -164,7 +175,10 @@ export default function GameAdapter({ socket, gameId, userId, username, gameInfo
 
       // Set first player's turn
       if (players[0].id === userId) {
+        console.log('🎲 You are first player - you can roll!');
         setCanRoll(true);
+      } else {
+        console.log(`⏳ Waiting for ${players[0].username} to roll`);
       }
     });
 

@@ -97,14 +97,26 @@ export default function GamePlayPage() {
     }
 
     // Connect to socket
+    console.log('🔌 Connecting to Socket.IO server...');
     const newSocket = io('http://localhost:3000');
     setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      console.log('✅ Socket connected!', newSocket.id);
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('❌ Socket error:', error);
+    });
 
     // Join game room
     const isCreator = game.created_by === user.id;
     const isFirstPlayer = !players || players.length === 0 || players[0].user_id === user.id;
 
+    console.log('👤 User info:', { userId: user.id, username: profile?.username, isCreator, isFirstPlayer });
+
     if (isCreator && isFirstPlayer) {
+      console.log('🎮 Creating game as first player...');
       newSocket.emit('create-game', {
         gameId,
         playerId: user.id,
@@ -112,6 +124,7 @@ export default function GamePlayPage() {
         wagerAmount: game.wager || 0,
       });
     } else {
+      console.log('🎮 Joining existing game...');
       newSocket.emit('join-game', {
         gameId,
         playerId: user.id,
@@ -124,7 +137,7 @@ export default function GamePlayPage() {
     if (players) {
       players.forEach((player) => {
         if (player.is_bot) {
-          console.log('🤖 Joining bot player to socket room');
+          console.log('🤖 Joining bot player to socket room:', player.user_id);
           newSocket.emit('join-game', {
             gameId,
             playerId: player.user_id,
@@ -136,7 +149,8 @@ export default function GamePlayPage() {
     }
 
     // Listen for game start
-    newSocket.on('game-started', () => {
+    newSocket.on('game-started', (data) => {
+      console.log('🎮 GAME STARTED! (page.tsx)', data);
       setWaitingForPlayer(false);
     });
 

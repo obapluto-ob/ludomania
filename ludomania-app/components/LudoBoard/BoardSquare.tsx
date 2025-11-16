@@ -22,20 +22,23 @@ export default function BoardSquare({
 
     switch (type) {
       case 'path':
-        return `${baseClasses} bg-white border-2 border-gray-300 hover:bg-yellow-50 shadow-inner`;
+        // Classic Ludo path - white with dark borders like the real game
+        return `${baseClasses} bg-white border-2 border-gray-800 hover:bg-yellow-50 shadow-sm`;
 
       case 'home':
         if (!color) return `${baseClasses} bg-gray-100 border-gray-300`;
         const homeScheme = COLOR_SCHEMES[color];
-        return `${baseClasses} bg-gradient-to-br ${homeScheme.gradient} border-4 shadow-xl ${homeScheme.glow} rounded-lg`;
+        // Home circles - vibrant with white border like classic Ludo
+        return `${baseClasses} bg-gradient-to-br ${homeScheme.gradient} border-4 border-white shadow-xl ${homeScheme.glow} rounded-full`;
 
       case 'finish':
         if (!color) return `${baseClasses} bg-gray-200 border-gray-400`;
         const finishScheme = COLOR_SCHEMES[color];
-        // Use inline style for dynamic color
-        return `${baseClasses} border-2 shadow-inner`;
+        // Finish lane - colored with dark borders
+        return `${baseClasses} border-2 border-gray-800 shadow-sm`;
 
       case 'center':
+        // Center triangle - bright and prominent
         return `${baseClasses} bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 border-4 border-white shadow-2xl`;
 
       case 'empty':

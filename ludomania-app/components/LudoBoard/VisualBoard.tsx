@@ -151,14 +151,14 @@ export default function VisualBoard({
           }
         }
 
-        // Add VIBRANT home zone background color if in home area
+        // Add SOLID VIBRANT home zone background - EXACTLY like Ludo King/Star! 🎮
         let bgClass = '';
         if (homeZoneBg && cellType === 'empty') {
           const bgColors: Record<string, string> = {
-            red: 'bg-red-400/60',      // Bright red - like classic Ludo!
-            blue: 'bg-blue-400/60',    // Bright blue - like classic Ludo!
-            green: 'bg-green-400/60',  // Bright green - like classic Ludo!
-            yellow: 'bg-yellow-300/60', // Bright yellow - like classic Ludo!
+            red: 'bg-red-500',      // SOLID bright red - like Ludo King!
+            blue: 'bg-blue-500',    // SOLID bright blue - like Ludo King!
+            green: 'bg-green-500',  // SOLID bright green - like Ludo King!
+            yellow: 'bg-yellow-400', // SOLID bright yellow - like Ludo King!
           };
           bgClass = bgColors[homeZoneBg] || '';
         }
